@@ -2,10 +2,10 @@ const video = document.querySelector("#video"); //
 const videoplayerContainer = document.querySelector("#videoplayer");
 
 const videoProgressBar = document.querySelector(
-    "#outside-progress-bar-container"
+    "#outside-progress-bar-container",
 );
 const videoProgressBarCircle = document.querySelector(
-    "#progress-bar-circle-container"
+    "#progress-bar-circle-container",
 );
 const settingsButton = document.querySelector("#settings-button");
 const settingsSvg = document.querySelector("#settings-svg");
@@ -13,7 +13,7 @@ const settingsMenu = document.querySelector("#settings-menu");
 let settingsButtonIsClicked = true;
 
 const restartVideoContainer = document.querySelector(
-    "#restart-video-container"
+    "#restart-video-container",
 );
 //============//
 //HIDE TOOLBAR//
@@ -253,6 +253,10 @@ let videoLenghtIsSet = false;
 
 video.addEventListener("loadeddata", () => {
     setVideoLenght();
+    barUpdate();
+    if (isPlay) {
+        playOrPause();
+    }
 });
 video.addEventListener("waiting", () => {
     if (!videoProgressBarIsMouseDown) {
@@ -263,6 +267,16 @@ video.addEventListener("playing", () => {
     spinner.style.display = "none";
 });
 video.ontimeupdate = () => {
+    barUpdate();
+};
+video.addEventListener("ended", () => {
+    videoPause();
+    globalIsPlay = false;
+    restartVideoContainer.style.display = "";
+    isEnded = true;
+});
+
+function barUpdate() {
     progressUpdate(video.currentTime);
     videoProgressBarValue.style.width = `${
         (video.currentTime / video.duration) * 100
@@ -282,27 +296,29 @@ video.ontimeupdate = () => {
     if (!videoLenghtIsSet) {
         setVideoLenght();
     }
-};
-video.addEventListener("ended", () => {
-    videoPause();
-    globalIsPlay = false;
-    restartVideoContainer.style.display = "";
-    isEnded = true;
-});
-function progressUpdate(videoCurrentTime) {
-    const videoMinutes = Math.floor(videoCurrentTime / 60);
-    const videoSeconds = Math.floor(videoCurrentTime - videoMinutes * 60);
-    videoLengthNow.textContent = `${videoMinutes
-        .toString()
-        .padStart(2, "0")}:${videoSeconds.toString().padStart(2, "0")}`;
 }
+function formatTime(time) {
+    const hours = Math.floor(time / 3600);
+    const minutes = Math.floor((time % 3600) / 60);
+    const seconds = Math.floor(time % 60);
+
+    const paddedMinutes = minutes.toString().padStart(2, "0");
+    const paddedSeconds = seconds.toString().padStart(2, "0");
+
+    if (hours > 0) {
+        return `${hours}:${paddedMinutes}:${paddedSeconds}`;
+    }
+    return `${paddedMinutes}:${paddedSeconds}`;
+}
+
+function progressUpdate(videoCurrentTime) {
+    videoLengthNow.textContent = formatTime(videoCurrentTime);
+}
+
 function setVideoLenght() {
     const videoDuration = video.duration;
-    const videoMinutes = Math.floor(videoDuration / 60);
-    const videoSeconds = Math.floor(videoDuration - videoMinutes * 60);
-    document.querySelector("#video-length-all").textContent = `${videoMinutes
-        .toString()
-        .padStart(2, "0")}:${videoSeconds.toString().padStart(2, "0")}`;
+    document.querySelector("#video-length-all").textContent =
+        formatTime(videoDuration);
     videoLenghtIsSet = true;
 }
 
@@ -456,7 +472,9 @@ document.addEventListener("click", (event) => {
     ) {
         setSettingsMenuDefault(true);
         showToolbarTimeoutDisplay = setTimeout(() => {
-            hideToolbar();
+            if (isPlay) {
+                hideToolbar();
+            }
         }, 2000);
     }
 });
@@ -493,8 +511,8 @@ function setSettingsMenuDefault(isClose) {
                         setTimeout(() => {
                             settingsMenuSpeedClick();
                         }, 10);
-                    })
-                )
+                    }),
+                ),
             );
             settingsMenu.appendChild(
                 createSettingsElement(
@@ -503,8 +521,8 @@ function setSettingsMenuDefault(isClose) {
                     `720p`,
                     svgChevronRight,
                     (labelType = 1),
-                    (itemType = 1)
-                )
+                    (itemType = 1),
+                ),
             );
         }, 100);
 
@@ -519,7 +537,7 @@ function createSettingsElement(
     labelType = 2,
     itemType = 1,
     clickFunc = false,
-    argsForClickFunc
+    argsForClickFunc,
 ) {
     const itemClass =
         itemType == 1 ? "settings-menu-item" : "settings-menu-item-2";
@@ -578,7 +596,7 @@ function settingsMenuSpeedClick() {
         "",
         "",
         (labelType = 2),
-        (itemType = 2)
+        (itemType = 2),
     );
     backButton.addEventListener("click", () => {
         setSettingsMenuDefault(false);
@@ -597,8 +615,8 @@ function settingsMenuSpeedClick() {
                 (labelType = 2),
                 (itemType = 1),
                 (clickFunc = settingsSetSpeed),
-                (argsForClickFunc = speed)
-            )
+                (argsForClickFunc = speed),
+            ),
         );
     }
 }
