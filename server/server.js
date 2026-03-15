@@ -25,8 +25,11 @@ app.get("/api/data", async (req, res) => {
         const data = JSON.parse(readData);
         console.log(data);
         return res.json(data);
-    } catch (err) {
-        return res.json({ error: "Ошибка получения даты", errorMessage: err });
+    } catch (error) {
+        return res.json({
+            error: "GetDataError",
+            errorMessage: error,
+        });
     }
 });
 
@@ -40,10 +43,11 @@ app.post("/api/newdata", async (req, res) => {
             success: true,
             message: "Данные обновлены",
         });
-    } catch (err) {
-        console.log(err);
+    } catch (error) {
+        console.log(error);
         res.status(500).json({
-            error: err,
+            error: "UpdateDataError",
+            errorMessage: error,
         });
     }
 });
@@ -51,7 +55,10 @@ app.post("/api/newdata", async (req, res) => {
 app.get("/api/anime/search", async (req, res) => {
     const uncodeTitle = req.query.title;
     if (!uncodeTitle) {
-        return res.json({ error: "Ничего не найдено" });
+        return res.json({
+            error: "SearchNotFound",
+            errorMessage: "По запросу ничего не найдено",
+        });
     }
     const title = decodeURIComponent(uncodeTitle);
 
@@ -68,9 +75,9 @@ app.get("/api/anime/search", async (req, res) => {
         res.json({
             response: results,
         });
-    } catch (e) {
+    } catch (error) {
         res.json({
-            response: e,
+            response: error,
         });
     }
 });
@@ -96,24 +103,35 @@ app.get("/api/anime/link", async (req, res) => {
     const seriaNum = req.query.seria_num;
     const translationId = req.query.translation_id;
 
-    const [link, quality] = await parser.getLink(
-        shikimoriId,
-        "shikimori",
-        seriaNum,
-        translationId
-    );
-    res.json({
-        link: link,
-        maxQuality: quality,
-    });
+    try {
+        const [link, quality] = await parser.getLink(
+            shikimoriId,
+            "shikimori",
+            seriaNum,
+            translationId,
+        );
+        res.json({
+            link: link,
+            maxQuality: quality,
+        });
+    } catch (error) {
+        return res.json({
+            error: "GetLinkError",
+            errorMessage: error,
+        });
+    }
 });
 
 app.get("/api/anime/poster", async (req, res) => {
-    const shikimoriId = req.query.shikimori_id;
-    const posterUrl = await shikimoriParser.getPoster(shikimoriId);
-    res.json({
-        posterUrl: posterUrl,
-    });
+    try {
+        const shikimoriId = req.query.shikimori_id;
+        const posterUrl = await shikimoriParser.getPoster(shikimoriId);
+        res.json({
+            posterUrl: posterUrl,
+        });
+    } catch (error) {
+        res.json({ error: "GetPosterError", errorMessage: error });
+    }
 });
 
 app.listen(PORT, () => {

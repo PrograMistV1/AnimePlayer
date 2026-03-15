@@ -139,6 +139,7 @@ export class ShikimoriParser {
 
         const res = {
             title: null,
+            poster: null,
             type: null,
             episodes: null,
             status: null,
@@ -151,6 +152,17 @@ export class ShikimoriParser {
         const title = $("header.head h1");
         const russianTitle = title.contents().get(0).nodeValue.trim();
         res.title = russianTitle;
+
+        //Постер
+        const posterBlock = $("div.b-db_entry-poster.b-image");
+        if (posterBlock.length !== 0) {
+            const metaImg = posterBlock
+                .find('meta[itemprop="image"]')
+                .attr("content");
+            if (metaImg) {
+                res.poster = metaImg;
+            }
+        }
 
         //Блок информации
         const blockInfo = $(".c-about .c-info-left .block .b-entry-info");
