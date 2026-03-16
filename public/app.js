@@ -10,7 +10,7 @@ const TranslationTitle = document.querySelector("#translation-title");
 const SeriesList = document.querySelector("#series");
 const SeriaTitle = document.querySelector("#seria-title");
 const ContinueWatchingContainer = document.querySelector(
-    "#continue-watching-container"
+    "#continue-watching-container",
 );
 
 let ANIME_PLAYER_DATA;
@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             let isBeginRender = false;
             if (continueWatching[i].viewed) {
                 const translations = await fetch(
-                    `/api/anime/info?shikimori_id=${continueWatching[i].shikimoriId}`
+                    `/api/anime/info?shikimori_id=${continueWatching[i].shikimoriId}`,
                 ).then(async (response) => {
                     const data = await response.json();
                     return data.response.translations;
@@ -53,12 +53,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                 if (continueWatching[i].seriaNum < lastSeria) {
                     console.log("ЕСТЬ СЛЕДУЮЩАЯ СЕРИЯ");
                     isBeginRender = true;
-                    continueWatching[i].lastUpdate = Date.now();
                     isNewData = true;
-                    ANIME_PLAYER_DATA.continueWatching[i].seriaNum = (
+                    continueWatching[i].lastUpdate = Date.now();
+                    continueWatching[i].seriaNum = (
                         parseInt(continueWatching[i].seriaNum) + 1
                     ).toString();
-                    ANIME_PLAYER_DATA.continueWatching[i].viewed = false;
+                    continueWatching[i].viewed = false;
+                    continueWatching[i].translationsName = transName;
+
                     console.log(continueWatching[i]);
                 } else continue;
             }
@@ -79,14 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function createCWCard(data, isBeginRender) {
     const container = document.createElement("div");
     container.className = "continue-watching-item";
-    container.addEventListener("click", () => {});
 
-    const posterUrl = await fetch(
-        `/api/anime/poster?shikimori_id=${data.shikimoriId}`
-    ).then(async (response) => {
-        const data = await response.json();
-        return data.posterUrl;
-    });
     let viewedPercent = 0;
     let viewedTime = 0;
     if (data.startedWatching) {
@@ -95,7 +90,7 @@ async function createCWCard(data, isBeginRender) {
             data.timeCode.minute * 60 +
             data.timeCode.hour * 3600;
         viewedPercent = Math.round(
-            (viewedTime / data.timeCode.fullTimeSeconds) * 100
+            (viewedTime / data.timeCode.fullTimeSeconds) * 100,
         );
     }
     container.addEventListener("click", async () => {
@@ -119,8 +114,9 @@ async function createCWCard(data, isBeginRender) {
     container.innerHTML = `
     <div class="continue-watching-img-container">
         <img
-            src="${posterUrl}"
+            src=""
             alt="poster"
+            id="poster-${data.shikimoriId}"
         />
         <div class="img-overlay"></div>
     </div>
@@ -144,8 +140,23 @@ async function createCWCard(data, isBeginRender) {
     </div>
     <div class="time-state" style="background: linear-gradient(to right, #ff6792 ${viewedPercent}%, transparent ${viewedPercent}%);"></div>
     `;
+
+    (async () => {
+        const posterUrl = await fetch(
+            `/api/anime/poster?shikimori_id=${data.shikimoriId}`,
+        ).then(async (response) => {
+            const data = await response.json();
+            return data.posterUrl;
+        });
+        const posterElement = container.querySelector(
+            `#poster-${data.shikimoriId}`,
+        );
+        posterElement.src = posterUrl;
+    })();
+
     if (isBeginRender) {
         ContinueWatchingContainer.prepend(container);
+        ContinueWatchingContainer.scrollTo({ left: 0, behavior: "smooth" });
         return;
     }
     ContinueWatchingContainer.appendChild(container);
@@ -233,7 +244,7 @@ async function ChooseAnime(results) {
     seriaData.title = results.title;
     AnimeInfoTitle.textContent = results.title;
     const posterUrl = await fetch(
-        `/api/anime/poster?shikimori_id=${shikimori_id}`
+        `/api/anime/poster?shikimori_id=${shikimori_id}`,
     ).then(async (response) => {
         const data = await response.json();
         return data.posterUrl;
@@ -247,7 +258,7 @@ async function ChooseAnime(results) {
 
     try {
         const resinfo = await fetch(
-            `/api/anime/info?shikimori_id=${shikimori_id}`
+            `/api/anime/info?shikimori_id=${shikimori_id}`,
         );
 
         const data = await resinfo.json();
@@ -321,7 +332,7 @@ async function setUrl() {
     ) {
         try {
             const response = await fetch(
-                `/api/anime/link?shikimori_id=${seriaData.shikimoriId}&seria_num=${seriaData.seriaNum}&translation_id=${seriaData.translationId}`
+                `/api/anime/link?shikimori_id=${seriaData.shikimoriId}&seria_num=${seriaData.seriaNum}&translation_id=${seriaData.translationId}`,
             );
             const data = await response.json();
 
@@ -349,7 +360,7 @@ searchInput.addEventListener(
         const results = await fetch(`/api/anime/search?title=${title}`);
         const data = await results.json();
         renderResultsList(data);
-    }, 300)
+    }, 300),
 );
 
 // THEME //
@@ -409,7 +420,7 @@ videoS.addEventListener("timeupdate", () => {
     const now = new Date();
     if (now - lastTimeUpdateTimeCode > 10000) {
         const animeData = ANIME_PLAYER_DATA.continueWatching.find(
-            (item) => item.shikimoriId == seriaData.shikimoriId
+            (item) => item.shikimoriId == seriaData.shikimoriId,
         );
         if (animeData) {
             const currentTime = Math.floor(videoS.currentTime);
@@ -429,7 +440,7 @@ videoS.addEventListener("timeupdate", () => {
 
 videoS.addEventListener("loadeddata", () => {
     const animeData = ANIME_PLAYER_DATA.continueWatching.find(
-        (item) => item.shikimoriId == seriaData.shikimoriId
+        (item) => item.shikimoriId == seriaData.shikimoriId,
     );
     if (!animeData) {
         const newAnimeData = {
@@ -454,33 +465,32 @@ videoS.addEventListener("loadeddata", () => {
         animeData.seriaNum = seriaData.seriaNum;
         animeData.translationsId = seriaData.translationId;
         animeData.translationsName = seriaData.translationName;
+        animeData.timeCode = {
+            fullTimeSeconds: Math.floor(videoS.duration),
+            hour: 0,
+            minute: 0,
+            second: 0,
+        };
     }
 });
 
 window.addEventListener("beforeunload", () => {
-    if (!deepEqualObject(LOADED_DATA, ANIME_PLAYER_DATA)) {
-        uploadData(ANIME_PLAYER_DATA);
-        LOADED_DATA = JSON.parse(JSON.stringify(ANIME_PLAYER_DATA));
-        console.log(ANIME_PLAYER_DATA);
-    }
+    validUploadData();
 });
 window.addEventListener("pagehide", (e) => {
-    if (e.persisted && !deepEqualObject(LOADED_DATA, ANIME_PLAYER_DATA)) {
-        uploadData(ANIME_PLAYER_DATA);
-        LOADED_DATA = JSON.parse(JSON.stringify(ANIME_PLAYER_DATA));
-        console.log(ANIME_PLAYER_DATA);
-    }
+    validUploadData(e.persisted);
 });
 document.addEventListener("visibilitychange", () => {
-    if (
-        document.visibilityState &&
-        !deepEqualObject(LOADED_DATA, ANIME_PLAYER_DATA)
-    ) {
+    validUploadData(document.visibilityState);
+});
+
+function validUploadData(condition = true) {
+    if (condition && !deepEqualObject(LOADED_DATA, ANIME_PLAYER_DATA)) {
         uploadData(ANIME_PLAYER_DATA);
         LOADED_DATA = JSON.parse(JSON.stringify(ANIME_PLAYER_DATA));
         console.log(ANIME_PLAYER_DATA);
     }
-});
+}
 function deepEqualObject(obj1, obj2) {
     if (obj1 === obj2) return true;
     if (

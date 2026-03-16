@@ -9,7 +9,11 @@ export class ShikimoriParser {
             Accept: "application/json, text/plain, */*",
             "X-Requested-With": "XMLHttpRequest",
         };
+        this.queue = Promise.resolve();
+        this.delayMs = 200;
     }
+
+    //Поиск по названию
     async search(title) {
         const params = new URLSearchParams({
             search: title,
@@ -102,8 +106,41 @@ export class ShikimoriParser {
             return [];
         }
     }
+    //Задержка запроса
+    _sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
 
-    async getPoster(shikimoriId) {
+    //Получение постера (с задержкой во избежание 429 ошибки)
+    async getPoster(shikimoriId, retryCount = 0) {
+        const MAX_RETRIES = 5;
+
+        const currentTask = (this.queue = this.queue.then(async () => {
+            try {
+                const result = await this._fetchPoster(shikimoriId);
+                await this._sleep(this.delayMs);
+                return result;
+            } catch (error) {
+                //Повтор попытки, если 429 ошибка
+                await this._sleep(this.delayMs * 2 + this.delayMs * retryCount);
+                if (error.message === "429" && retryCount < MAX_RETRIES) {
+                    return "RETRY_NEEDED";
+                }
+                throw error;
+            }
+        }));
+        this.queue = currentTask.catch(() => {});
+        const result = await currentTask;
+
+        if (result === "RETRY_NEEDED") {
+            return this.getPoster(shikimoriId, retryCount + 1);
+        }
+
+        return result;
+    }
+
+    //Парсинг постера
+    async _fetchPoster(shikimoriId) {
         const response = await fetch(
             `https://${this._dmn}/animes/${shikimoriId}`,
             {
@@ -111,6 +148,11 @@ export class ShikimoriParser {
                 headers: this.headers,
             },
         );
+
+        if (response.status === 429) {
+            throw new Error("429");
+        }
+
         const htmlContent = await response.text();
         const $ = load(htmlContent);
 
@@ -126,6 +168,8 @@ export class ShikimoriParser {
         }
         return null;
     }
+
+    //Получение информации о тайтле
     async getInfoById(shikimoriId) {
         const response = await fetch(
             `https://${this._dmn}/animes/${shikimoriId}`,
