@@ -142,16 +142,36 @@ async function createCWCard(data, isBeginRender) {
     `;
 
     (async () => {
-        const posterUrl = await fetch(
-            `/api/anime/poster?shikimori_id=${data.shikimoriId}`,
-        ).then(async (response) => {
-            const data = await response.json();
-            return data.posterUrl;
-        });
         const posterElement = container.querySelector(
             `#poster-${data.shikimoriId}`,
         );
-        posterElement.src = posterUrl;
+
+        const posterRequest = async () => {
+            posterElement.removeEventListener("error", errorHandler);
+            try {
+                const posterUrl = await fetch(
+                    `/api/anime/poster?shikimori_id=${data.shikimoriId}`,
+                ).then(async (response) => {
+                    const data = await response.json();
+                    return data.posterUrl;
+                });
+                if (posterUrl) {
+                    posterElement.src = posterUrl;
+                    data.posterUrl = posterUrl;
+                }
+            } catch (error) {
+                console.log(error);
+            }
+        };
+
+        const errorHandler = () => posterRequest();
+        posterElement.addEventListener("error", errorHandler);
+
+        if (data.posterUrl) {
+            posterElement.src = data.posterUrl;
+        } else {
+            posterRequest();
+        }
     })();
 
     if (isBeginRender) {
@@ -438,14 +458,15 @@ videoS.addEventListener("timeupdate", () => {
     }
 });
 
-videoS.addEventListener("loadeddata", () => {
-    const animeData = ANIME_PLAYER_DATA.continueWatching.find(
+videoS.addEventListener("loadeddata", async () => {
+    let animeData = ANIME_PLAYER_DATA.continueWatching.find(
         (item) => item.shikimoriId == seriaData.shikimoriId,
     );
     if (!animeData) {
-        const newAnimeData = {
+        animeData = {
             title: seriaData.title,
             shikimoriId: seriaData.shikimoriId,
+            posterUrl: null,
             translationsId: seriaData.translationId,
             translationsName: seriaData.translationName,
             seriaNum: seriaData.seriaNum,
@@ -459,7 +480,7 @@ videoS.addEventListener("loadeddata", () => {
             },
             lastUpdate: Date.now(),
         };
-        ANIME_PLAYER_DATA.continueWatching.push(newAnimeData);
+        ANIME_PLAYER_DATA.continueWatching.push(animeData);
     } else {
         animeData.startedWatching = true;
         animeData.seriaNum = seriaData.seriaNum;
@@ -471,6 +492,21 @@ videoS.addEventListener("loadeddata", () => {
             minute: 0,
             second: 0,
         };
+    }
+    if (!animeData.posterUrl) {
+        try {
+            const posterUrl = await fetch(
+                `/api/anime/poster?shikimori_id=${animeData.shikimoriId}`,
+            ).then(async (response) => {
+                const data = await response.json();
+                return data.posterUrl;
+            });
+            if (posterUrl) {
+                animeData.posterUrl = posterUrl;
+            }
+        } catch (error) {
+            console.log(error);
+        }
     }
 });
 
