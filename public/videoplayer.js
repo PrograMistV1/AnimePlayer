@@ -252,8 +252,11 @@ const videoProgressBarLoad = document.querySelector("#progress-bar-load");
 let videoLenghtIsSet = false;
 
 video.addEventListener("loadeddata", () => {
+    console.log("loadeddata debug video");
     setVideoLenght();
     barUpdate();
+});
+video.addEventListener("loadstart", () => {
     if (isPlay) {
         playOrPause();
     }
