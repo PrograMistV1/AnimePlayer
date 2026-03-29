@@ -486,12 +486,7 @@ videoS.addEventListener("loadeddata", async () => {
         animeData.seriaNum = seriaData.seriaNum;
         animeData.translationsId = seriaData.translationId;
         animeData.translationsName = seriaData.translationName;
-        animeData.timeCode = {
-            fullTimeSeconds: Math.floor(videoS.duration),
-            hour: 0,
-            minute: 0,
-            second: 0,
-        };
+        animeData.timeCode.fullTimeSeconds = Math.floor(videoS.duration);
     }
     if (!animeData.posterUrl) {
         try {
