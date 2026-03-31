@@ -307,7 +307,10 @@ async function ChooseAnime(results) {
             fragment.appendChild(li);
         }
         TranslationsList.appendChild(fragment);
-        renderSeriesList(info.series_count);
+
+        if (transNameToEpCount(info.translations[0].title)[0] === 0) {
+            renderSeriesList(info.series_count - 1);
+        } else renderSeriesList(info.series_count);
     } catch (e) {
         console.log("Error in ChooseAnime", e);
     }
@@ -331,9 +334,9 @@ function ChooseSeria(num) {
     setUrl();
 }
 
-function renderSeriesList(count) {
+function renderSeriesList(count, start = 1) {
     SeriesList.textContent = "";
-    for (let i = 1; i <= count; i++) {
+    for (let i = start; i <= count; i++) {
         const button = document.createElement("button");
         button.className = "seria-button";
         button.textContent = i;
@@ -362,6 +365,7 @@ async function setUrl() {
             const newSource = document.createElement("source");
             newSource.type = "video/mp4";
             newSource.src = `https:${data.link}${data.maxQuality}.mp4`;
+            newSource.id = "video-source";
             videoS.appendChild(newSource);
             videoS.load();
             console.log("set url");

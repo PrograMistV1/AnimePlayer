@@ -28,6 +28,19 @@
     justify-content: center;
     align-items: center;
 }
+.start-play-error {
+    position: absolute;
+    transform: translateY(50px);
+    background: #4c4c4c70;
+    color: #ffffff;
+    display: none;
+    opacity: 0;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    border-radius: 5px;
+    transition: 200ms;
+}
 
 .restart-video-container {
     height: 100%;

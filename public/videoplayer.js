@@ -1,4 +1,4 @@
-const video = document.querySelector("#video"); //
+const video = document.querySelector("#video");
 const videoplayerContainer = document.querySelector("#videoplayer");
 
 const videoProgressBar = document.querySelector(
@@ -93,11 +93,31 @@ videoplayerContainer.addEventListener("touchstart", (event) => {
 
 const startPlayButton = document.querySelector("#start-play-button");
 const startPlayContainer = document.querySelector("#start-play-container");
+const startPlayError = document.querySelector("#start-play-error");
 let videoIsStarted = false;
+let hideStartPlayErrorTimeout;
+let hide2StartPlayErrorTimeout;
 startPlayButton.addEventListener("click", () => {
-    videoPlay();
-    startPlayContainer.style.display = "none";
-    videoIsStarted = true;
+    const videoSrc = document.querySelector("#video-source");
+    if (videoSrc.hasAttribute("src") && videoSrc.getAttribute("src") !== "") {
+        videoPlay();
+        startPlayContainer.style.display = "none";
+        videoIsStarted = true;
+    } else {
+        clearTimeout(hideStartPlayErrorTimeout);
+        clearTimeout(hide2StartPlayErrorTimeout);
+        startPlayError.style.display = "flex";
+        setTimeout(() => {
+            startPlayError.style.opacity = "1";
+        }, 10);
+
+        hideStartPlayErrorTimeout = setTimeout(() => {
+            startPlayError.style.opacity = "0";
+            hide2StartPlayErrorTimeout = setTimeout(() => {
+                startPlayError.style.display = "none";
+            }, 200);
+        }, 1000);
+    }
 });
 startPlayButton.addEventListener("touchend", () => {
     videoPlay();
@@ -319,6 +339,13 @@ function progressUpdate(videoCurrentTime) {
 
 function setVideoLenght() {
     const videoDuration = video.duration;
+    if (!videoDuration) {
+        console.log(
+            (document.querySelector("#video-length-all").textContent =
+                formatTime(0)),
+        );
+        return;
+    }
     document.querySelector("#video-length-all").textContent =
         formatTime(videoDuration);
     videoLenghtIsSet = true;
