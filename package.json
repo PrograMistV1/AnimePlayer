@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "cd ./server && node server.js"
+    "start": "cd ./server && node server.js",
+    "postinstall": "patch-package"
   },
   "type": "module",
   "keywords": [],
@@ -14,5 +15,9 @@
     "@aerosstube/anime-parser-kodik-ts": "^1.0.0",
     "cheerio": "^1.1.2",
     "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "patch-package": "^8.0.1",
+    "postinstall-postinstall": "^2.1.0"
   }
 }

@@ -309,7 +309,7 @@ async function ChooseAnime(results) {
         TranslationsList.appendChild(fragment);
 
         if (transNameToEpCount(info.translations[0].title)[0] === 0) {
-            renderSeriesList(info.series_count - 1);
+            renderSeriesList(info.series_count, 0);
         } else renderSeriesList(info.series_count);
     } catch (e) {
         console.log("Error in ChooseAnime", e);

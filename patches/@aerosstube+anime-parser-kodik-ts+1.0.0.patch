@@ -1,0 +1,114 @@
+diff --git a/node_modules/@aerosstube/anime-parser-kodik-ts/dist/lib/parser_kodik.js b/node_modules/@aerosstube/anime-parser-kodik-ts/dist/lib/parser_kodik.js
+index c4dce3b..fa624fb 100644
+--- a/node_modules/@aerosstube/anime-parser-kodik-ts/dist/lib/parser_kodik.js
++++ b/node_modules/@aerosstube/anime-parser-kodik-ts/dist/lib/parser_kodik.js
+@@ -39,7 +39,7 @@ class KodikParser {
+             throw new errors_1.TokenError('Токен kodik не указан');
+         }
+         const payload = { token: this.TOKEN, ...filters, ...parameters };
+-        const url = `https://kodikapi.com/${endpoint}`;
++        const url = `https://kodik-api.com/${endpoint}`;
+         let data;
+         try {
+             const resp = await axios_1.default.post(url, new URLSearchParams(payload));
+@@ -218,13 +218,13 @@ class KodikParser {
+         }
+         let serv;
+         if (id_type === 'shikimori') {
+-            serv = `https://kodikapi.com/get-player?title=Player&hasPlayer=false&url=https%3A%2F%2Fkodikdb.com%2Ffind-player%3FshikimoriID%3D${id}&token=${this.TOKEN}&shikimoriID=${id}`;
++            serv = `https://kodik-api.com/get-player?title=Player&hasPlayer=false&url=https%3A%2F%2Fkodikdb.com%2Ffind-player%3FshikimoriID%3D${id}&token=${this.TOKEN}&shikimoriID=${id}`;
+         }
+         else if (id_type === 'kinopoisk') {
+-            serv = `https://kodikapi.com/get-player?title=Player&hasPlayer=false&url=https%3A%2F%2Fkodikdb.com%2Ffind-player%3FkinopoiskID%3D${id}&token=${this.TOKEN}&kinopoiskID=${id}`;
++            serv = `https://kodik-api.com/get-player?title=Player&hasPlayer=false&url=https%3A%2F%2Fkodikdb.com%2Ffind-player%3FkinopoiskID%3D${id}&token=${this.TOKEN}&kinopoiskID=${id}`;
+         }
+         else if (id_type === 'imdb') {
+-            serv = `https://kodikapi.com/get-player?title=Player&hasPlayer=false&url=https%3A%2F%2Fkodikdb.com%2Ffind-player%3FkinopoiskID%3D${id}&token=${this.TOKEN}&imdbID=${id}`;
++            serv = `https://kodik-api.com/get-player?title=Player&hasPlayer=false&url=https%3A%2F%2Fkodikdb.com%2Ffind-player%3FkinopoiskID%3D${id}&token=${this.TOKEN}&imdbID=${id}`;
+         }
+         else {
+             throw new Error('Неизвестный тип id');
+@@ -246,7 +246,12 @@ class KodikParser {
+         if (!data['found']) {
+             throw new errors_1.NoResults(`Нет данных по ${id_type} id "${id}"`);
+         }
+-        return (https ? 'https:' : 'http:') + data['link'];
++
++        if (data['link'].slice(0, 5).includes('http')) {
++            return https ? data['link'] : data['link'].replace('https://', 'http://');
++        } else {
++            return (https ? 'https:' : 'http:') + data['link'];
++        }
+     }
+     async getInfo(id, id_type) {
+         let idStr;
+@@ -313,16 +318,16 @@ class KodikParser {
+         }
+     }
+     _isSerial(iframe_url) {
+-        const idx = iframe_url.indexOf('.info/');
+-        if (idx === -1 || idx + 6 >= iframe_url.length)
++        const idx = iframe_url.indexOf('kodikplayer.com/');
++        if (idx === -1 || idx + 16 >= iframe_url.length)
+             return false;
+-        return iframe_url[idx + 6] === 's';
++        return iframe_url[idx + 16] === 's';
+     }
+     _isVideo(iframe_url) {
+-        const idx = iframe_url.indexOf('.info/');
+-        if (idx === -1 || idx + 6 >= iframe_url.length)
++        const idx = iframe_url.indexOf('kodikplayer.com/');
++        if (idx === -1 || idx + 16 >= iframe_url.length)
+             return false;
+-        return iframe_url[idx + 6] === 'v';
++        return iframe_url[idx + 16] === 'v';
+     }
+     _generateTranslationsDict(translations_div, $) {
+         if (translations_div && translations_div.length > 0) {
+@@ -407,7 +412,9 @@ class KodikParser {
+             throw new errors_1.UnexpectedBehavior('urlParams не найден');
+         }
+         let container, media_hash, media_id, url, soup, script_url;
+-        if (translationIdStr !== '0' && seriaNum !== 0) {
++        if (translationIdStr !== '0' && (
++            seriaNum !== 0 || (seriaNum === 0 && this._isSerial(link))
++        )) {
+             container = $('div.serial-translations-box select');
+             media_hash = null;
+             media_id = null;
+@@ -417,7 +424,7 @@ class KodikParser {
+                     media_id = $(this).attr('data-media-id') || null;
+                 }
+             });
+-            url = `https://kodik.info/serial/${media_id}/${media_hash}/720p?min_age=16&first_url=false&season=1&episode=${seriaNum}`;
++            url = `https://kodikplayer.com/serial/${media_id}/${media_hash}/720p?min_age=16&first_url=false&season=1&episode=${seriaNum}`;
+             const resp2 = await axios_1.default.get(url);
+             data = resp2.data;
+             if (this.USE_LXML) {
+@@ -437,7 +444,7 @@ class KodikParser {
+                     media_id = $(this).attr('data-media-id') || null;
+                 }
+             });
+-            url = `https://kodik.info/video/${media_id}/${media_hash}/720p?min_age=16&first_url=false&season=1&episode=${seriaNum}`;
++            url = `https://kodikplayer.com/video/${media_id}/${media_hash}/720p?min_age=16&first_url=false&season=1&episode=${seriaNum}`;
+             const resp2 = await axios_1.default.get(url);
+             data = resp2.data;
+             if (this.USE_LXML) {
+@@ -480,7 +487,7 @@ class KodikParser {
+         const post_link = await this._getPostLink(script_url);
+         let data;
+         try {
+-            const resp = await axios_1.default.post(`https://kodik.info${post_link}`, new URLSearchParams(params), { headers: headers });
++            const resp = await axios_1.default.post(`https://kodikplayer.com${post_link}`, new URLSearchParams(params), { headers: headers });
+             data = resp.data;
+         }
+         catch (e) {
+@@ -541,7 +548,7 @@ class KodikParser {
+     async _getPostLink(script_url) {
+         let data;
+         try {
+-            const resp = await axios_1.default.get('https://kodik.info' + script_url);
++            const resp = await axios_1.default.get('https://kodikplayer.com' + script_url);
+             data = resp.data;
+         }
+         catch (e) {
