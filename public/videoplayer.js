@@ -120,9 +120,26 @@ startPlayButton.addEventListener("click", () => {
     }
 });
 startPlayButton.addEventListener("touchend", () => {
-    videoPlay();
-    startPlayContainer.style.display = "none";
-    videoIsStarted = true;
+    const videoSrc = document.querySelector("#video-source");
+    if (videoSrc.hasAttribute("src") && videoSrc.getAttribute("src") !== "") {
+        videoPlay();
+        startPlayContainer.style.display = "none";
+        videoIsStarted = true;
+    } else {
+        clearTimeout(hideStartPlayErrorTimeout);
+        clearTimeout(hide2StartPlayErrorTimeout);
+        startPlayError.style.display = "flex";
+        setTimeout(() => {
+            startPlayError.style.opacity = "1";
+        }, 10);
+
+        hideStartPlayErrorTimeout = setTimeout(() => {
+            startPlayError.style.opacity = "0";
+            hide2StartPlayErrorTimeout = setTimeout(() => {
+                startPlayError.style.display = "none";
+            }, 200);
+        }, 1000);
+    }
 });
 
 //=============//
