@@ -191,6 +191,7 @@ function transNameToEpCount(translation) {
             return [parseInt(match[3], 10)];
         }
     }
+    return [];
 }
 
 async function uploadData(data) {
@@ -228,6 +229,7 @@ function debounce(func, delay) {
 
 function renderResultsList(response) {
     if (response.error) {
+        searchResultsList.textContent = "";
         console.log(response.error);
         return;
     }
@@ -308,9 +310,12 @@ async function ChooseAnime(results) {
         }
         TranslationsList.appendChild(fragment);
 
+        console.log(transNameToEpCount(info.translations[0].title)[0]);
         if (transNameToEpCount(info.translations[0].title)[0] === 0) {
-            renderSeriesList(info.series_count, 0);
-        } else renderSeriesList(info.series_count);
+            renderSeriesList(info.series_count - 1, 0);
+            return;
+        }
+        renderSeriesList(info.series_count);
     } catch (e) {
         console.log("Error in ChooseAnime", e);
     }
@@ -336,15 +341,23 @@ function ChooseSeria(num) {
 
 function renderSeriesList(count, start = 1) {
     SeriesList.textContent = "";
-    for (let i = start; i <= count; i++) {
-        const button = document.createElement("button");
-        button.className = "seria-button";
-        button.textContent = i;
-        button.addEventListener("click", () => {
-            ChooseSeria(i);
-        });
-        SeriesList.appendChild(button);
+
+    if (count === 0) {
+        createSeriaButton(0);
     }
+    for (let i = start; i <= count; i++) {
+        createSeriaButton(i);
+    }
+}
+
+function createSeriaButton(n) {
+    const button = document.createElement("button");
+    button.className = "seria-button";
+    button.textContent = n;
+    button.addEventListener("click", () => {
+        ChooseSeria(n);
+    });
+    SeriesList.appendChild(button);
 }
 
 async function setUrl() {
