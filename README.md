@@ -20,7 +20,7 @@
         cd AnimePlayer
         ```
     - **Загрузка архива:**
-      [Скачайте ZIP-архив](https://github.com/IvanMixnenko2/AnimePlayer.git/archive/refs/heads/master.zip) с исходным кодом, распакуйте его и перейдите в созданную папку через терминал.
+      [Скачайте ZIP-архив](https://github.com/IvanMixnenko2/AnimePlayer/archive/refs/heads/master.zip) с исходным кодом, распакуйте его и перейдите в созданную папку через терминал.
 
 2. **Установка зависимостей**
 
