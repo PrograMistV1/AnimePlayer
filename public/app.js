@@ -290,7 +290,7 @@ async function ChooseAnime(results) {
             console.log(info.error);
 
             TranslationsList.textContent = "";
-            renderSeriesList(0);
+            renderSeriesList(null);
             AnimeInfoTitle.textContent = `${results.title} АНИМЕ НЕ НАЙДЕНО В БАЗЕ KODIK`;
             return;
         }
@@ -341,6 +341,8 @@ function ChooseSeria(num) {
 
 function renderSeriesList(count, start = 1) {
     SeriesList.textContent = "";
+
+    if (count == null) return
 
     if (count === 0) {
         createSeriaButton(0);
