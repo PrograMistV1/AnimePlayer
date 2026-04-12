@@ -311,6 +311,11 @@ async function ChooseAnime(results) {
         TranslationsList.appendChild(fragment);
 
         console.log(transNameToEpCount(info.translations[0].title)[0]);
+
+        if (results.type == "Фильм") {
+            renderSeriesList(null);
+            return;
+        }
         if (transNameToEpCount(info.translations[0].title)[0] === 0) {
             renderSeriesList(info.series_count - 1, 0);
             return;
@@ -342,7 +347,7 @@ function ChooseSeria(num) {
 function renderSeriesList(count, start = 1) {
     SeriesList.textContent = "";
 
-    if (count == null) return
+    if (count == null) return;
 
     if (count === 0) {
         createSeriaButton(0);

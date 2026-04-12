@@ -54,7 +54,7 @@ let hideToolbarTimeoutDisplay;
 let showToolbarTimeoutDisplay;
 
 videoplayerContainer.addEventListener("mousemove", () => {
-    if (isPlay && settingsButtonIsClicked) {
+    if (settingsButtonIsClicked && videoIsStarted) {
         showToolbar();
         if (showToolbarTimeoutDisplay) {
             clearTimeout(showToolbarTimeoutDisplay);
