@@ -1,9 +1,11 @@
 import express from "express";
 import path from "path";
 import {fileURLToPath} from "url";
-import {readFile, writeFile} from "fs/promises";
+import {readFile, rename, writeFile} from "fs/promises";
 import {createParser} from "@aerosstube/anime-parser-kodik-ts";
 import {ShikimoriParser} from "./shikimori-parser.js";
+import {randomUUID} from "crypto";
+import {existsSync} from "fs";
 
 const parser = await createParser();
 const shikimoriParser = new ShikimoriParser();
@@ -14,6 +16,14 @@ const PORT = process.env.PORT || 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const DATA_PATH = path.join(__dirname, "data.json");
+if (!existsSync(DATA_PATH)) {
+    await writeFile(DATA_PATH, JSON.stringify({
+        searchMethod: "shikimoriParser", continueWatching: []
+    }, null, 4));
+    console.log("data.json создан");
+}
+
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 
@@ -21,33 +31,34 @@ app.use(express.static(path.join(__dirname, "../public")));
 
 app.get("/api/data", async (req, res) => {
     try {
-        const readData = await readFile("./data.json", "utf8");
+        const readData = await readFile(DATA_PATH, "utf8");
         const data = JSON.parse(readData);
         console.log(data);
         return res.json(data);
     } catch (error) {
         return res.json({
-            error: "GetDataError",
-            errorMessage: error,
+            error: "GetDataError", errorMessage: error.message,
         });
     }
 });
 
 app.post("/api/newdata", async (req, res) => {
-    try {
-        console.log("LOADED NEW DATA");
+    if (!req.body || Object.keys(req.body).length === 0) {
+        return res.status(400).json({error: "EmptyBody"});
+    }
 
-        await writeFile("./data.json", JSON.stringify(req.body, null, 4));
+    const tmpPath = path.join(__dirname, `data.${randomUUID()}.tmp`);
+    try {
+        await writeFile(tmpPath, JSON.stringify(req.body, null, 4));
+        await rename(tmpPath, DATA_PATH);
 
         res.status(200).json({
-            success: true,
-            message: "Данные обновлены",
+            success: true, message: "Данные обновлены",
         });
     } catch (error) {
         console.log(error);
         res.status(500).json({
-            error: "UpdateDataError",
-            errorMessage: error,
+            error: "UpdateDataError", errorMessage: error.message,
         });
     }
 });
@@ -56,8 +67,7 @@ app.get("/api/anime/search", async (req, res) => {
     const uncodeTitle = req.query.title;
     if (!uncodeTitle) {
         return res.json({
-            error: "SearchNotFound",
-            errorMessage: "По запросу ничего не найдено",
+            error: "SearchNotFound", errorMessage: "По запросу ничего не найдено",
         });
     }
     const title = decodeURIComponent(uncodeTitle);
@@ -84,6 +94,10 @@ app.get("/api/anime/search", async (req, res) => {
 
 app.get("/api/anime/info", async (req, res) => {
     const shikimoriId = req.query.shikimori_id;
+    if (!shikimoriId) {
+        return res.status(400).json({error: "MissingParams"});
+    }
+
     try {
         const info = await parser.getInfo(shikimoriId, "shikimori");
         res.json({
@@ -94,6 +108,8 @@ app.get("/api/anime/info", async (req, res) => {
             res.json({
                 response: {error: "Not found in Kodik"},
             });
+        } else {
+            res.status(500).json({error: error.name, errorMessage: error.message});
         }
     }
 });
@@ -102,22 +118,18 @@ app.get("/api/anime/link", async (req, res) => {
     const shikimoriId = req.query.shikimori_id;
     const seriaNum = req.query.seria_num;
     const translationId = req.query.translation_id;
+    if (!shikimoriId || !seriaNum || !translationId) {
+        return res.status(400).json({error: "MissingParams"});
+    }
 
     try {
-        const [link, quality] = await parser.getLink(
-            shikimoriId,
-            "shikimori",
-            seriaNum,
-            translationId,
-        );
+        const [link, quality] = await parser.getLink(shikimoriId, "shikimori", seriaNum, translationId,);
         res.json({
-            link: link,
-            maxQuality: quality,
+            link: link, maxQuality: quality,
         });
     } catch (error) {
         return res.json({
-            error: "GetLinkError",
-            errorMessage: error,
+            error: "GetLinkError", errorMessage: error.message,
         });
     }
 });
@@ -130,7 +142,7 @@ app.get("/api/anime/poster", async (req, res) => {
             posterUrl: posterUrl,
         });
     } catch (error) {
-        res.json({error: "GetPosterError", errorMessage: error});
+        res.json({error: "GetPosterError", errorMessage: error.message});
     }
 });
 
