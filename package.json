@@ -5,7 +5,7 @@
 	"main": "index.js",
 	"scripts": {
 		"init": "node scripts/init.js",
-		"start": "npm run init && cd ./server && node --env-file=../.env server.js",
+		"start": "node scripts/init.js && tsx watch --env-file=.env server/server.ts",
 		"postinstall": "patch-package"
 	},
 	"type": "module",
@@ -18,7 +18,11 @@
 		"express": "^5.1.0"
 	},
 	"devDependencies": {
+		"@types/express": "^5.0.6",
+		"@types/node": "^25.8.0",
 		"patch-package": "^8.0.1",
-		"postinstall-postinstall": "^2.1.0"
+		"postinstall-postinstall": "^2.1.0",
+		"tsx": "^4.22.0",
+		"typescript": "^6.0.3"
 	}
 }

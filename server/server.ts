@@ -6,6 +6,7 @@ import {createParser} from "@aerosstube/anime-parser-kodik-ts";
 import {ShikimoriParser} from "./shikimori-parser.js";
 import {randomUUID} from "crypto";
 import {existsSync} from "fs";
+import type {AnimeData} from "./types.js";
 
 const parser = await createParser();
 const shikimoriParser = new ShikimoriParser();
@@ -29,27 +30,29 @@ app.use(express.urlencoded({extended: true}));
 
 app.use(express.static(path.join(__dirname, "../public")));
 
-app.get("/api/data", async (req, res) => {
+app.get("/api/data", async (_req, res) => {
     try {
         const readData = await readFile(DATA_PATH, "utf8");
-        const data = JSON.parse(readData);
+        const data: AnimeData = JSON.parse(readData);
         console.log(data);
         return res.json(data);
     } catch (error) {
+        const err = error as Error;
         return res.json({
-            error: "GetDataError", errorMessage: error.message,
+            error: "GetDataError", errorMessage: err.message,
         });
     }
 });
 
 app.post("/api/newdata", async (req, res) => {
-    if (!req.body || Object.keys(req.body).length === 0) {
+    const body = req.body as AnimeData;
+    if (!body || Object.keys(body).length === 0) {
         return res.status(400).json({error: "EmptyBody"});
     }
 
     const tmpPath = path.join(__dirname, `data.${randomUUID()}.tmp`);
     try {
-        await writeFile(tmpPath, JSON.stringify(req.body, null, 4));
+        await writeFile(tmpPath, JSON.stringify(body, null, 4));
         await rename(tmpPath, DATA_PATH);
 
         res.status(200).json({
@@ -57,14 +60,15 @@ app.post("/api/newdata", async (req, res) => {
         });
     } catch (error) {
         console.log(error);
+        const err = error as Error;
         res.status(500).json({
-            error: "UpdateDataError", errorMessage: error.message,
+            error: "UpdateDataError", errorMessage: err.message,
         });
     }
 });
 
 app.get("/api/anime/search", async (req, res) => {
-    const uncodeTitle = req.query.title;
+    const uncodeTitle = req.query.title as string | undefined;
     if (!uncodeTitle) {
         return res.json({
             error: "SearchNotFound", errorMessage: "По запросу ничего не найдено",
@@ -93,7 +97,7 @@ app.get("/api/anime/search", async (req, res) => {
 });
 
 app.get("/api/anime/info", async (req, res) => {
-    const shikimoriId = req.query.shikimori_id;
+    const shikimoriId = req.query.shikimori_id as string | number | undefined;
     if (!shikimoriId) {
         return res.status(400).json({error: "MissingParams"});
     }
@@ -104,45 +108,51 @@ app.get("/api/anime/info", async (req, res) => {
             response: info,
         });
     } catch (error) {
-        if (error.name === "NoResults") {
+        const err = error as Error;
+        if (err.name === "NoResults") {
             res.json({
                 response: {error: "Not found in Kodik"},
             });
         } else {
-            res.status(500).json({error: error.name, errorMessage: error.message});
+            res.status(500).json({error: err.name, errorMessage: err.message});
         }
     }
 });
 
 app.get("/api/anime/link", async (req, res) => {
-    const shikimoriId = req.query.shikimori_id;
-    const seriaNum = req.query.seria_num;
-    const translationId = req.query.translation_id;
+    const shikimoriId = req.query.shikimori_id as string | number | undefined;
+    const seriaNum = req.query.seria_num as string | undefined;
+    const translationId = req.query.translation_id as string | number | undefined;
     if (!shikimoriId || !seriaNum || !translationId) {
         return res.status(400).json({error: "MissingParams"});
     }
 
     try {
-        const [link, quality] = await parser.getLink(shikimoriId, "shikimori", seriaNum, translationId,);
+        const [link, quality] = await parser.getLink(shikimoriId, "shikimori", Number(seriaNum), translationId,);
         res.json({
             link: link, maxQuality: quality,
         });
     } catch (error) {
+        const err = error as Error;
         return res.json({
-            error: "GetLinkError", errorMessage: error.message,
+            error: "GetLinkError", errorMessage: err.message,
         });
     }
 });
 
 app.get("/api/anime/poster", async (req, res) => {
     try {
-        const shikimoriId = req.query.shikimori_id;
+        const shikimoriId = req.query.shikimori_id as string | number | undefined;
+        if (!shikimoriId) {
+            return res.status(400).json({error: "MissingParams"});
+        }
         const posterUrl = await shikimoriParser.getPoster(shikimoriId);
         res.json({
             posterUrl: posterUrl,
         });
     } catch (error) {
-        res.json({error: "GetPosterError", errorMessage: error.message});
+        const err = error as Error;
+        res.json({error: "GetPosterError", errorMessage: err.message});
     }
 });
 
