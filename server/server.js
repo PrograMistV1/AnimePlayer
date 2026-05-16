@@ -1,21 +1,21 @@
 import express from "express";
 import path from "path";
-import { fileURLToPath } from "url";
-import { readFile, writeFile } from "fs/promises";
-import { createParser } from "@aerosstube/anime-parser-kodik-ts";
-import { ShikimoriParser } from "./shikimori-parser.js";
+import {fileURLToPath} from "url";
+import {readFile, writeFile} from "fs/promises";
+import {createParser} from "@aerosstube/anime-parser-kodik-ts";
+import {ShikimoriParser} from "./shikimori-parser.js";
 
 const parser = await createParser();
 const shikimoriParser = new ShikimoriParser();
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({extended: true}));
 
 app.use(express.static(path.join(__dirname, "../public")));
 
@@ -92,7 +92,7 @@ app.get("/api/anime/info", async (req, res) => {
     } catch (error) {
         if (error.name === "NoResults") {
             res.json({
-                response: { error: "Not found in Kodik" },
+                response: {error: "Not found in Kodik"},
             });
         }
     }
@@ -130,10 +130,10 @@ app.get("/api/anime/poster", async (req, res) => {
             posterUrl: posterUrl,
         });
     } catch (error) {
-        res.json({ error: "GetPosterError", errorMessage: error });
+        res.json({error: "GetPosterError", errorMessage: error});
     }
 });
 
 app.listen(PORT, () => {
-    console.log("Server started on http://localhost:3000");
+    console.log(`Server started on http://localhost:${PORT}`);
 });
