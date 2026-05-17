@@ -108,7 +108,7 @@ async function createCWCard(data, isBeginRender) {
         await setUrl();
         videoS.currentTime = viewedTime;
         console.log("set viewed");
-        videoS.scrollIntoView({ behavior: "smooth" });
+        videoS.scrollIntoView({behavior: "smooth"});
     });
 
     container.innerHTML = `
@@ -176,7 +176,7 @@ async function createCWCard(data, isBeginRender) {
 
     if (isBeginRender) {
         ContinueWatchingContainer.prepend(container);
-        ContinueWatchingContainer.scrollTo({ left: 0, behavior: "smooth" });
+        ContinueWatchingContainer.scrollTo({left: 0, behavior: "smooth"});
         return;
     }
     ContinueWatchingContainer.appendChild(container);
@@ -195,16 +195,15 @@ function transNameToEpCount(translation) {
 }
 
 async function uploadData(data) {
-    await fetch("/api/newdata", {
+    await fetch("/api/data", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
+        headers: {"Content-Type": "application/json"},
         body: JSON.stringify(data),
     }).then(async (response) => {
         console.log(await response.json());
     });
 }
+
 // SET ANIME //
 
 const seriaData = {
@@ -541,11 +540,13 @@ document.addEventListener("visibilitychange", () => {
 
 function validUploadData(condition = true) {
     if (condition && !deepEqualObject(LOADED_DATA, ANIME_PLAYER_DATA)) {
-        uploadData(ANIME_PLAYER_DATA);
+        uploadData(ANIME_PLAYER_DATA).then(() => {
+        });
         LOADED_DATA = JSON.parse(JSON.stringify(ANIME_PLAYER_DATA));
         console.log(ANIME_PLAYER_DATA);
     }
 }
+
 function deepEqualObject(obj1, obj2) {
     if (obj1 === obj2) return true;
     if (

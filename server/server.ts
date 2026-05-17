@@ -30,42 +30,44 @@ app.use(express.urlencoded({extended: true}));
 
 app.use(express.static(path.join(__dirname, "../public")));
 
-app.get("/api/data", async (_req, res) => {
-    try {
-        const readData = await readFile(DATA_PATH, "utf8");
-        const data: AnimeData = JSON.parse(readData);
-        console.log(data);
-        return res.json(data);
-    } catch (error) {
-        const err = error as Error;
-        return res.json({
-            error: "GetDataError", errorMessage: err.message,
-        });
-    }
-});
 
-app.post("/api/newdata", async (req, res) => {
-    const body = req.body as AnimeData;
-    if (!body || Object.keys(body).length === 0) {
-        return res.status(400).json({error: "EmptyBody"});
-    }
+app.route("/api/data")
+    .get(async (_req, res) => {
+        try {
+            const readData = await readFile(DATA_PATH, "utf8");
+            const data: AnimeData = JSON.parse(readData);
+            console.log(data);
+            return res.json(data);
+        } catch (error) {
+            const err = error as Error;
+            return res.json({
+                error: "GetDataError", errorMessage: err.message,
+            });
+        }
+    })
+    .post(async (req, res) => {
+        const body = req.body as AnimeData;
+        if (!body || Object.keys(body).length === 0) {
+            return res.status(400).json({error: "EmptyBody"});
+        }
 
-    const tmpPath = path.join(__dirname, `data.${randomUUID()}.tmp`);
-    try {
-        await writeFile(tmpPath, JSON.stringify(body, null, 4));
-        await rename(tmpPath, DATA_PATH);
+        const tmpPath = path.join(__dirname, `data.${randomUUID()}.tmp`);
+        try {
+            await writeFile(tmpPath, JSON.stringify(body, null, 4));
+            await rename(tmpPath, DATA_PATH);
 
-        res.status(200).json({
-            success: true, message: "Данные обновлены",
-        });
-    } catch (error) {
-        console.log(error);
-        const err = error as Error;
-        res.status(500).json({
-            error: "UpdateDataError", errorMessage: err.message,
-        });
-    }
-});
+            res.status(200).json({
+                success: true, message: "Данные обновлены",
+            });
+        } catch (error) {
+            console.log(error);
+            const err = error as Error;
+            res.status(500).json({
+                error: "UpdateDataError", errorMessage: err.message,
+            });
+        }
+    });
+
 
 app.get("/api/anime/search", async (req, res) => {
     const uncodeTitle = req.query.title as string | undefined;
