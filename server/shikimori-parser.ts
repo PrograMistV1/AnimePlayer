@@ -1,10 +1,11 @@
+import type {Cheerio} from "cheerio";
 import {load} from "cheerio";
+import type {Element} from "domhandler"; // ← вот это добавить
 import type {AnimeInfo, SearchResult} from "./types.js";
 
 export class ShikimoriParser {
     private readonly _dmn: string;
     private readonly headers: Record<string, string>;
-    private queue: Promise<unknown>;
     private readonly delayMs: number;
     private readonly MAX_RETRIES = 5;
 
@@ -15,111 +16,35 @@ export class ShikimoriParser {
             Accept: "application/json, text/plain, */*",
             "X-Requested-With": "XMLHttpRequest",
         };
-        this.queue = Promise.resolve();
         this.delayMs = 200;
     }
 
     async search(title: string): Promise<SearchResult[]> {
-        const params = new URLSearchParams({
-            search: title,
-        });
+        const params = new URLSearchParams({search: title});
         const response = await fetch(
             `https://${this._dmn}/animes/autocomplete/v2?${params}`,
-            {
-                method: "GET",
-                headers: this.headers,
-            },
+            {method: "GET", headers: this.headers}
         );
-        //Обработка статусов ответа
-        if (response.status === 429) {
-            throw new Error(
-                "Сервер вернул код 429 для обозначения что запросы выполняются слишком часто.",
-            );
-        } else if (response.status === 520) {
-            throw new Error(
-                "Сервер вернул статус ответа 520, что означает что он перегружен и не может ответить сразу.",
-            );
-        } else if (response.status !== 200) {
-            throw new Error(
-                `Сервер не вернул ожидаемый код 200. Код: "${response.status}"`,
-            );
-        }
-        const data = await response.json();
-        const htmlContent = data.content;
+
+        this.assertResponseOk(response);
+
+        const {content: htmlContent} = await response.json();
 
         try {
-            const $ = load(htmlContent);
-
-            const res: SearchResult[] = [];
-
-            $("div.b-db_entry-variant-list_item").each((_index, element) => {
-                const anime = $(element);
-
-                //Проверяем, что это аниме
-                if (anime.attr("data-type") !== "anime") return;
-
-                const cData: Partial<SearchResult> = {};
-                cData.link = anime.attr("data-url");
-                cData.shikimori_id = anime.attr("data-id");
-
-                //Постер
-                const imageDiv = anime.find("div.image");
-                if (imageDiv.length > 0) {
-                    const img = imageDiv.find("picture img");
-                    if (img.length > 0 && img.attr("srcset")) {
-                        cData.poster = img.attr("srcset")!.split(" ")[0] ?? null;
-                    } else {
-                        cData.poster = null;
-                    }
-                } else {
-                    cData.poster = null;
-                }
-
-                const info = anime.find("div.info");
-                if (info.length === 0) return;
-
-                //Названия
-                const nameLink = info.find("div.name a");
-                if (nameLink.length > 0) {
-                    cData.original_title = nameLink.attr("title");
-                    cData.title = nameLink.text().split("/")[0]?.trim();
-                }
-
-                //Информация о типе
-                const lineDiv = info.find("div.line").first();
-                if (lineDiv.length > 0) {
-                    const keyDiv = lineDiv.find("div.key");
-                    if (keyDiv.length > 0 && keyDiv.text().trim() === "Тип:") {
-                        const valueDiv = lineDiv.find("div.value");
-                        const typeTag = valueDiv.find("div.b-tag").first();
-                        cData.type = typeTag.length > 0 ? typeTag.text().trim() : null;
-                    } else {
-                        cData.type = null;
-                    }
-                } else {
-                    cData.type = null;
-                }
-                res.push(cData as SearchResult);
-            });
-            return res;
-        } catch (e) {
+            return this.parseSearchResults(htmlContent);
+        } catch {
             return [];
         }
     }
 
     async getInfo(shikimoriId: string | number, retryCount = 0): Promise<AnimeInfo> {
-        let response: Response;
-        try {
-            response = await fetch(
-                `https://${this._dmn}/animes/${shikimoriId}`,
-                {method: "GET", headers: this.headers}
-            );
-        } catch (error) {
-            throw error;
-        }
+        const response = await fetch(
+            `https://${this._dmn}/animes/${shikimoriId}`,
+            {method: "GET", headers: this.headers}
+        );
         if (response.status === 429) {
             if (retryCount < this.MAX_RETRIES) {
-                await this._sleep(this.delayMs * 2 + this.delayMs * retryCount);
+                await new Promise((resolve) => setTimeout(resolve, this.delayMs * 2 + this.delayMs * retryCount));
                 return this.getInfo(shikimoriId, retryCount + 1);
             }
             throw new Error("429");
@@ -175,8 +100,70 @@ export class ShikimoriParser {
         return res;
     }
 
-    //Задержка запроса
-    private _sleep(ms: number): Promise<void> {
-        return new Promise((resolve) => setTimeout(resolve, ms));
+    private assertResponseOk(response: Response): void {
+        const handlers: Record<number, string> = {
+            429: "Запросы выполняются слишком часто.",
+            520: "Сервер перегружен и не может ответить сразу.",
+        };
+
+        const message = handlers[response.status];
+        if (message) throw new Error(`Сервер вернул код ${response.status}: ${message}`);
+
+        if (response.status !== 200) {
+            throw new Error(`Сервер не вернул ожидаемый код 200. Код: "${response.status}"`);
+        }
+    }
+
+    private parseSearchResults(htmlContent: string): SearchResult[] {
+        const $ = load(htmlContent);
+        const results: SearchResult[] = [];
+
+        $("div.b-db_entry-variant-list_item").each((_index, element) => {
+            const result = this.parseSearchResultItem($(element));
+            if (result) results.push(result);
+        });
+
+        return results;
+    }
+
+    private parseSearchResultItem(anime: Cheerio<Element>): SearchResult | null {
+        if (anime.attr("data-type") !== "anime") return null;
+
+        const info = anime.find("div.info");
+        if (!info.length) return null;
+
+        return {
+            link: anime.attr("data-url"),
+            shikimori_id: anime.attr("data-id"),
+            poster: this.parsePoster(anime),
+            ...this.parseTitles(info),
+            type: this.parseType(info),
+        } as SearchResult;
+    }
+
+    private parsePoster(anime: Cheerio<Element>): string | null {
+        const img = anime.find("div.image picture img");
+        const srcset = img.attr("srcset");
+        return srcset ? srcset.split(" ")[0] ?? null : null;
+    }
+
+    private parseTitles(info: Cheerio<Element>): Pick<SearchResult, "title" | "original_title"> {
+        const nameLink = info.find("div.name a");
+        if (!nameLink.length) return {title: undefined, original_title: undefined};
+
+        return {
+            original_title: nameLink.attr("title"),
+            title: nameLink.text().split("/")[0]?.trim(),
+        };
+    }
+
+    private parseType(info: Cheerio<Element>): string | null {
+        const lineDiv = info.find("div.line").first();
+        if (!lineDiv.length) return null;
+
+        const isTypeKey = lineDiv.find("div.key").text().trim() === "Тип:";
+        if (!isTypeKey) return null;
+
+        return lineDiv.find("div.value div.b-tag").first().text().trim() || null;
     }
 }
