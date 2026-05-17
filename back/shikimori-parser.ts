@@ -1,6 +1,6 @@
 import type {Cheerio} from "cheerio";
 import {load} from "cheerio";
-import type {Element} from "domhandler"; // ← вот это добавить
+import type {Element} from "domhandler";
 import type {AnimeInfo, SearchResult} from "./types.js";
 
 export class ShikimoriParser {

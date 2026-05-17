@@ -1,4 +1,4 @@
-import type { AnimeInfoResponse, AnimeData } from "../types.ts";
+import type {AnimeData, AnimeInfoResponse, AnimeLinkResponse} from "../types.ts";
 
 async function fetchJson<T>(url: string): Promise<T> {
     const response = await fetch(url);
@@ -24,7 +24,7 @@ export async function getAnimeLink(
     shikimoriId: string,
     seriaNum: number,
     translationId: string
-): Promise<{ link: string; maxQuality: string }> {
+): Promise<AnimeLinkResponse> {
     return fetchJson(
         `/api/anime/link?shikimori_id=${shikimoriId}&seria_num=${seriaNum}&translation_id=${translationId}`
     );
@@ -37,7 +37,7 @@ export async function loadAnimeData(): Promise<AnimeData> {
 export async function saveAnimeData(data: AnimeData): Promise<void> {
     await fetch("/api/data", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type": "application/json"},
         body: JSON.stringify(data),
     });
 }

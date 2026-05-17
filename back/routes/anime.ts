@@ -57,8 +57,9 @@ async function link(req: Request, res: Response) {
     }
 
     try {
-        const [link, quality] = await parser.getLink(shikimoriId, "shikimori", Number(seriaNum), translationId,);
-        res.json({link: link, maxQuality: quality,});
+        const [link, quality] = await parser.getLink(shikimoriId, "shikimori", Number(seriaNum), translationId);
+        const qualities = [720, 480, 360].filter(q => q <= quality);
+        res.json({link, qualities});
     } catch (error) {
         const err = error as Error;
         return res.json({error: "GetLinkError", errorMessage: err.message,});

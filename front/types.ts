@@ -58,3 +58,8 @@ export interface SeriaData {
     title: string | undefined;
     translationName: string | undefined;
 }
+
+export interface AnimeLinkResponse {
+    link: string;
+    qualities: number[];
+}
