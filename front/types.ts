@@ -9,7 +9,7 @@ export interface ContinueWatchingItem {
     title: string;
     shikimoriId: string;
     posterUrl: string | null;
-    translationsId: string | number;
+    translationsId: string;
     translationsName: string;
     seriaNum: number;
     startedWatching: boolean;
