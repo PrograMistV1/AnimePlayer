@@ -107,45 +107,25 @@ export class ShikimoriParser {
         }
     }
 
-    //Получение постера (с задержкой во избежание 429 ошибки)
-    async getPoster(shikimoriId: string | number, retryCount = 0): Promise<string | null> {
-        const currentTask = (this.queue = this.queue.then(async () => {
-            try {
-                const result = await this._fetchPoster(shikimoriId);
-                await this._sleep(this.delayMs);
-                return result;
-            } catch (error) {
-                const err = error as Error;
-                //Повтор попытки, если 429 ошибка
+    async getInfo(shikimoriId: string | number, retryCount = 0): Promise<AnimeInfo> {
+        let response: Response;
+        try {
+            response = await fetch(
+                `https://${this._dmn}/animes/${shikimoriId}`,
+                {method: "GET", headers: this.headers}
+            );
+        } catch (error) {
+            throw error;
+        }
+        if (response.status === 429) {
+            if (retryCount < this.MAX_RETRIES) {
                 await this._sleep(this.delayMs * 2 + this.delayMs * retryCount);
-                if (err.message === "429" && retryCount < this.MAX_RETRIES) {
-                    return "RETRY_NEEDED";
-                }
-                throw error;
+                return this.getInfo(shikimoriId, retryCount + 1);
             }
-        }));
-        this.queue = currentTask.catch(() => {
-        });
-        const result = await currentTask as string | null;
-
-        if (result === "RETRY_NEEDED") {
-            return this.getPoster(shikimoriId, retryCount + 1);
+            throw new Error("429");
         }
 
-        return result;
-    }
-
-    //Получение информации о тайтле
-    async getInfoById(shikimoriId: string | number): Promise<AnimeInfo> {
-        const response = await fetch(
-            `https://${this._dmn}/animes/${shikimoriId}`,
-            {
-                method: "GET",
-                headers: this.headers,
-            },
-        );
-        const htmlContent = await response.text();
-        const $ = load(htmlContent);
+        const $ = load(await response.text());
 
         const res: AnimeInfo = {
             title: null,
@@ -158,98 +138,41 @@ export class ShikimoriParser {
             description: null,
         };
 
-        //Название
-        const title = $("header.head h1");
-        res.title = (title.contents().get(0) as unknown as Text)?.nodeValue?.trim() ?? null;
+        res.title = ($("header.head h1").contents().get(0) as unknown as Text)?.nodeValue?.trim() ?? null;
+        res.poster = $("div.b-db_entry-poster.b-image")
+            .find('meta[itemprop="image"]')
+            .attr("content") ?? null;
 
-        //Постер
-        const posterBlock = $("div.b-db_entry-poster.b-image");
-        if (posterBlock.length !== 0) {
-            const metaImg = posterBlock
-                .find('meta[itemprop="image"]')
-                .attr("content");
-            if (metaImg) {
-                res.poster = metaImg;
-            }
-        }
+        $(".c-about .c-info-left .block .b-entry-info").find(".line-container")
+            .each((_index, element) => {
+                const key = $(element).find(".key").text().replace(":", "").trim();
+                const value = $(element).find(".value");
 
-        //Блок информации
-        const blockInfo = $(".c-about .c-info-left .block .b-entry-info");
-        blockInfo.find(".line-container").each((_index, element) => {
-            const key = $(element).find(".key").text().replace(":", "").trim();
-            const value = $(element).find(".value");
+                if (key == "Тип") res.type = value.text().trim();
+                if (key == "Эпизоды") res.episodes = value.text().split(" / ");
+                if (key == "Статус") res.status = value.children().first().attr("data-text") ?? null;
+                if (key == "Жанры") {
+                    res.genres = [];
+                    value.find(".b-tag").each((_i, el) => {
+                        const genreName = $(el).find(".genre-ru").text().trim();
+                        if (genreName) res.genres!.push(genreName);
+                    });
+                }
+            });
+        res.rating = parseFloat($('meta[itemprop="ratingValue"]').attr("content") ?? "0");
 
-            if (key == "Тип") {
-                res.type = value.text().trim();
-            }
-            if (key == "Эпизоды") {
-                res.episodes = value.text().split(" / ");
-            }
-            if (key == "Статус") {
-                res.status = value.children().first().attr("data-text") ?? null;
-            }
-            if (key == "Жанры") {
-                res.genres = [];
-                value.find(".b-tag").each((_i, el) => {
-                    const genreName = $(el).find(".genre-ru").text().trim();
-                    if (genreName) {
-                        res.genres!.push(genreName);
-                    }
-                });
-            }
-        });
-
-        //Рейтинг
-        const rating = $('meta[itemprop="ratingValue"]').attr("content");
-        res.rating = parseFloat(rating ?? "0");
-
-        //Описание
         const blockDesc = $(".c-description .block .b-text_with_paragraphs");
-        if (
-            blockDesc.length === 0 ||
-            blockDesc.find(".b-nothing_here").length > 0
-        ) {
+        if (blockDesc.length === 0 || blockDesc.find(".b-nothing_here").length > 0) {
             res.description = null;
         } else {
             res.description = blockDesc
                 .html()!
                 .split(/<br\s*\/?>|<br\s*class="br"\s*\/?>/i)
-                .map((p) => {
-                    return $(`<div>${p}</div>`).text().trim();
-                })
+                .map((p) => $(`<div>${p}</div>`).text().trim())
                 .filter((p) => p.length > 0);
         }
+
         return res;
-    }
-
-    //Парсинг постера
-    private async _fetchPoster(shikimoriId: string | number): Promise<string | null> {
-        const response = await fetch(
-            `https://${this._dmn}/animes/${shikimoriId}`,
-            {
-                method: "GET",
-                headers: this.headers,
-            },
-        );
-
-        if (response.status === 429) {
-            throw new Error("429");
-        }
-
-        const htmlContent = await response.text();
-        const $ = load(htmlContent);
-
-        const posterBlock = $("div.b-db_entry-poster.b-image");
-        if (posterBlock.length === 0) {
-            return null;
-        }
-        const metaImg = posterBlock
-            .find('meta[itemprop="image"]')
-            .attr("content");
-        if (metaImg) {
-            return metaImg;
-        }
-        return null;
     }
 
     //Задержка запроса

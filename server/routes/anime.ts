@@ -10,7 +10,6 @@ const shikimoriParser = new ShikimoriParser();
 router.get("/search", search);
 router.get("/info", info);
 router.get("/link", link);
-router.get("/poster", poster);
 
 async function search(req: Request, res: Response) {
     const uncodeTitle = req.query.title as string | undefined;
@@ -32,15 +31,20 @@ async function info(req: Request, res: Response) {
         return res.status(400).json({error: "MissingParams"});
     }
     try {
-        const info = await parser.getInfo(shikimoriId, "shikimori");
-        res.json({response: info,});
+        const [kodikInfo, shikimoriInfo] = await Promise.allSettled([
+            parser.getInfo(shikimoriId, "shikimori"),
+            shikimoriParser.getInfo(shikimoriId)
+        ]);
+
+        res.json({
+            response: {
+                kodikInfo: kodikInfo.status === "fulfilled" ? kodikInfo.value : null,
+                shikimoriInfo: shikimoriInfo.status === "fulfilled" ? shikimoriInfo.value : null,
+            }
+        });
     } catch (error) {
         const err = error as Error;
-        if (err.name === "NoResults") {
-            res.json({response: {error: "Not found in Kodik"}});
-        } else {
-            res.status(500).json({error: err.name, errorMessage: err.message});
-        }
+        res.status(500).json({error: err.name, errorMessage: err.message});
     }
 }
 
@@ -58,20 +62,6 @@ async function link(req: Request, res: Response) {
     } catch (error) {
         const err = error as Error;
         return res.json({error: "GetLinkError", errorMessage: err.message,});
-    }
-}
-
-async function poster(req: Request, res: Response) {
-    try {
-        const shikimoriId = req.query.shikimori_id as string | number | undefined;
-        if (!shikimoriId) {
-            return res.status(400).json({error: "MissingParams"});
-        }
-        const posterUrl = await shikimoriParser.getPoster(shikimoriId);
-        res.json({posterUrl: posterUrl,});
-    } catch (error) {
-        const err = error as Error;
-        res.json({error: "GetPosterError", errorMessage: err.message});
     }
 }
 

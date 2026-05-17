@@ -149,18 +149,18 @@ async function createCWCard(data, isBeginRender) {
         const posterRequest = async () => {
             posterElement.removeEventListener("error", errorHandler);
             try {
-                const posterUrl = await fetch(
-                    `/api/anime/poster?shikimori_id=${data.shikimoriId}`,
+                const [info, shikimoriInfo] = await fetch(
+                    `/api/anime/info?shikimori_id=${data.shikimoriId}`,
                 ).then(async (response) => {
                     const data = await response.json();
-                    return data.posterUrl;
+                    return data.response;
                 });
-                if (posterUrl) {
-                    posterElement.src = posterUrl;
-                    data.posterUrl = posterUrl;
+                if (shikimoriInfo?.poster) {
+                    posterElement.src = shikimoriInfo.poster;
+                    data.posterUrl = shikimoriInfo.poster;
                 }
             } catch (error) {
-                console.log(error);
+                console.error(error);
             }
         };
 
@@ -264,62 +264,50 @@ async function ChooseAnime(results) {
     seriaData.shikimoriId = shikimori_id;
     seriaData.title = results.title;
     AnimeInfoTitle.textContent = results.title;
-    const posterUrl = await fetch(
-        `/api/anime/poster?shikimori_id=${shikimori_id}`,
-    ).then(async (response) => {
-        const data = await response.json();
-        return data.posterUrl;
-    });
-    AnimeInfoImg.src = posterUrl;
 
-    if (results.type == "Фильм") {
+    if (results.type === "Фильм") {
         seriaData.seriaNum = 0;
         SeriaTitle.textContent = "Серия: Фильм";
     }
 
     try {
-        const resinfo = await fetch(
-            `/api/anime/info?shikimori_id=${shikimori_id}`,
-        );
-
+        const resinfo = await fetch(`/api/anime/info?shikimori_id=${shikimori_id}`);
         const data = await resinfo.json();
-        const info = data.response;
-        console.log(info);
-        if (info.error) {
-            console.log(info.error);
 
+        const {kodikInfo, shikimoriInfo} = data.response;
+        AnimeInfoImg.src = shikimoriInfo?.poster ?? "";
+
+        if (!kodikInfo) {
+            AnimeInfoTitle.textContent = `${results.title} АНИМЕ НЕ НАЙДЕНО В БАЗЕ KODIK`;
             TranslationsList.textContent = "";
             renderSeriesList(null);
-            AnimeInfoTitle.textContent = `${results.title} АНИМЕ НЕ НАЙДЕНО В БАЗЕ KODIK`;
             return;
         }
         const fragment = document.createDocumentFragment();
         TranslationsList.textContent = "";
-        for (let i = 0; i < info.translations.length; i++) {
+        for (let i = 0; i < kodikInfo.translations.length; i++) {
             const li = document.createElement("li");
             const setTranslation = document.createElement("button");
             setTranslation.addEventListener("click", (event) => {
-                ChooseTranslation(info.translations[i]);
+                ChooseTranslation(kodikInfo.translations[i]);
             });
             setTranslation.className = "list-item-button translations-item";
-            setTranslation.textContent = info.translations[i].title;
+            setTranslation.textContent = kodikInfo.translations[i].title;
 
             li.appendChild(setTranslation);
             fragment.appendChild(li);
         }
         TranslationsList.appendChild(fragment);
 
-        console.log(transNameToEpCount(info.translations[0].title)[0]);
-
-        if (results.type == "Фильм") {
+        if (results.type === "Фильм") {
             renderSeriesList(null);
             return;
         }
-        if (transNameToEpCount(info.translations[0].title)[0] === 0) {
-            renderSeriesList(info.series_count - 1, 0);
+        if (transNameToEpCount(kodikInfo.translations[0].title)[0] === 0) {
+            renderSeriesList(kodikInfo.series_count - 1, 0);
             return;
         }
-        renderSeriesList(info.series_count);
+        renderSeriesList(kodikInfo.series_count);
     } catch (e) {
         console.log("Error in ChooseAnime", e);
     }
@@ -483,7 +471,7 @@ videoS.addEventListener("timeupdate", () => {
 
 videoS.addEventListener("loadeddata", async () => {
     let animeData = ANIME_PLAYER_DATA.continueWatching.find(
-        (item) => item.shikimoriId == seriaData.shikimoriId,
+        (item) => item.shikimoriId === seriaData.shikimoriId,
     );
     if (!animeData) {
         animeData = {
@@ -513,19 +501,21 @@ videoS.addEventListener("loadeddata", async () => {
     }
     if (!animeData.posterUrl) {
         try {
-            const posterUrl = await fetch(
-                `/api/anime/poster?shikimori_id=${animeData.shikimoriId}`,
+            const [_kodikInfo, shikimoriInfo] = await fetch(
+                `/api/anime/info?shikimori_id=${animeData.shikimoriId}`,
             ).then(async (response) => {
                 const data = await response.json();
-                return data.posterUrl;
+                return data.response;
             });
-            if (posterUrl) {
-                animeData.posterUrl = posterUrl;
+            if (shikimoriInfo?.poster) {
+                animeData.posterUrl = shikimoriInfo.poster;
             }
         } catch (error) {
-            console.log(error);
+            console.error(error);
         }
     }
+    await uploadData(ANIME_PLAYER_DATA);
+    LOADED_DATA = JSON.parse(JSON.stringify(ANIME_PLAYER_DATA));
 });
 
 window.addEventListener("beforeunload", () => {
