@@ -5,7 +5,9 @@
 	"main": "index.js",
 	"scripts": {
 		"init": "node scripts/init.js",
-		"start": "node scripts/init.js && tsx watch --env-file=.env server/server.ts",
+		"dev": "node scripts/init.js && concurrently \"vite\" \"tsx watch --env-file=.env back/server.ts\"",
+		"build": "vite build",
+		"start": "npm run build && node scripts/init.js && tsx --env-file=.env back/server.ts",
 		"postinstall": "patch-package"
 	},
 	"type": "module",
@@ -20,9 +22,11 @@
 	"devDependencies": {
 		"@types/express": "^5.0.6",
 		"@types/node": "^25.8.0",
+		"concurrently": "^9.2.1",
 		"patch-package": "^8.0.1",
 		"postinstall-postinstall": "^2.1.0",
 		"tsx": "^4.22.0",
-		"typescript": "^6.0.3"
+		"typescript": "^6.0.3",
+		"vite": "^8.0.13"
 	}
 }
