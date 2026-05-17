@@ -1,6 +1,6 @@
 import { getAnimeInfo, getAnimeLink, searchAnime } from "../api/animeApi.ts";
 import type { KodikInfo, Translation } from "../types.ts";
-import { seriaData } from "../state/playerState.ts";
+import {currentQuality, seriaData, setQualities, setVideoLink} from "../state/playerState.ts";
 
 const animeInfoTitle = document.querySelector<HTMLElement>("#anime-info-title")!;
 const animeInfoImg = document.querySelector<HTMLImageElement>("#anime-info-img")!;
@@ -140,11 +140,14 @@ export async function setUrl(): Promise<void> {
     try {
         const data = await getAnimeLink(shikimoriId, seriaNum, translationId);
 
+        setVideoLink(data.link);
+        setQualities(data.qualities);
+
         while (videoS.firstChild) videoS.removeChild(videoS.firstChild);
 
         const source = document.createElement("source");
         source.type = "video/mp4";
-        source.src = `https:${data.link}${data.maxQuality}.mp4`;
+        source.src = `https:${data.link}${currentQuality}.mp4`;
         source.id = "video-source";
         videoS.appendChild(source);
         videoS.load();

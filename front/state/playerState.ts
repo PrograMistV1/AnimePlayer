@@ -8,6 +8,10 @@ export const seriaData: SeriaData = {
     translationName: undefined,
 };
 
+export let currentVideoLink: string = "";
+export let currentQuality: number = 0;
+export let availableQualities: number[] = [];
+
 let _AnimeData: AnimeData | null = null;
 let _loadedData: AnimeData | null = null;
 
@@ -31,4 +35,17 @@ export function syncLoadedData(): void {
 
 export function isDataChanged(): boolean {
     return JSON.stringify(_AnimeData) !== JSON.stringify(_loadedData);
+}
+
+export function setVideoLink(link: string): void {
+    currentVideoLink = link;
+}
+
+export function setQualities(qualities: number[]): void {
+    availableQualities = qualities;
+    currentQuality = qualities[0] ?? 0;
+}
+
+export function setCurrentQuality(quality: number): void {
+    currentQuality = quality;
 }
