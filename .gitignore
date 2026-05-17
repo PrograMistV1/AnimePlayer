@@ -1,5 +1,6 @@
 node_modules/
 server/test.js
 server/data.json
+server/logs
 .env
 .idea
