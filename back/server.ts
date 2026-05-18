@@ -28,8 +28,6 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 
-app.use(express.static(path.join(__dirname, "../front")));
-
 app.use((req, _res, next) => {
     if (!req.path.startsWith("/.well-known")) {
         console.log(`${req.method} ${req.path}`);
@@ -39,6 +37,12 @@ app.use((req, _res, next) => {
 
 app.use("/api/anime", animeRouter);
 app.use("/api/data", dataRouter);
+
+app.use(express.static(path.join(__dirname, "../dist/public")));
+
+app.use((_req, res) => {
+    res.sendFile(path.join(__dirname, "../dist/public/index.html"));
+});
 
 app.listen(PORT, () => {
     console.log(`Server started on http://localhost:${PORT}`);
