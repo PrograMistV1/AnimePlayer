@@ -5,8 +5,8 @@
 	"main": "index.js",
 	"scripts": {
 		"init": "node scripts/init.js",
-		"dev": "node scripts/init.js && concurrently \"vite\" \"tsx watch --env-file=.env back/server.ts\"",
-		"build": "vite build",
+		"dev": "node scripts/init.js && concurrently \"tsx scripts/esbuild.ts --watch\" \"tsx watch --env-file=.env back/server.ts\"",
+		"build": "tsx scripts/esbuild.ts",
 		"start": "npm run build && node scripts/init.js && tsx --env-file=.env back/server.ts",
 		"postinstall": "patch-package"
 	},
@@ -23,10 +23,10 @@
 		"@types/express": "^5.0.6",
 		"@types/node": "^25.8.0",
 		"concurrently": "^9.2.1",
+		"esbuild": "^0.28.0",
 		"patch-package": "^8.0.1",
 		"postinstall-postinstall": "^2.1.0",
 		"tsx": "^4.22.0",
-		"typescript": "^6.0.3",
-		"vite": "^8.0.13"
+		"typescript": "^6.0.3"
 	}
 }
