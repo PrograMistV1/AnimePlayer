@@ -1,3 +1,6 @@
 node_modules/
-server/test.js
-server/data.json
+back/data.json
+back/logs
+dist
+.env
+.idea
