@@ -402,16 +402,7 @@ settingsButton.addEventListener("click", () => {
         settingsButtonIsClicked = false;
         settingsSvg.style.transform = "rotate(30deg)";
 
-        settingsMenu.style.width = "300px";
-        settingsMenu.replaceChildren();
-        settingsMenu.appendChild(createSettingsElement(
-            svgSpeedIcon, "Скорость воспроизведения", `${videoSpeed}x`, svgChevronRight,
-            1, 1, () => setTimeout(() => settingsMenuSpeedClick(), 10),
-        ));
-        settingsMenu.appendChild(createSettingsElement(
-            svgQualityIcon, "Качество", `${currentQuality}p`, svgChevronRight,
-            1, 1, () => setTimeout(() => settingsMenuQualityClick(), 10),
-        ));
+        renderSettings();
 
         settingsMenu.style.opacity = "1";
         setTimeout(() => {
@@ -498,20 +489,22 @@ function setSettingsMenuDefault(isClose: boolean): void {
     }
 
     if (!settingsDefaultState) {
-        setTimeout(() => {
-            settingsMenu.style.width = "300px";
-            settingsMenu.replaceChildren();
-            settingsMenu.appendChild(createSettingsElement(
-                svgSpeedIcon, "Скорость воспроизведения", `${videoSpeed}x`, svgChevronRight,
-                1, 1, () => setTimeout(() => settingsMenuSpeedClick(), 10),
-            ));
-            settingsMenu.appendChild(createSettingsElement(
-                svgQualityIcon, "Качество", `${currentQuality}p`, svgChevronRight,
-                1, 1, () => setTimeout(() => settingsMenuQualityClick(), 10),
-            ));
-        }, 100);
+        setTimeout(() => renderSettings(), 100);
         settingsDefaultState = true;
     }
+}
+
+function renderSettings(): void {
+    settingsMenu.style.width = "300px";
+    settingsMenu.replaceChildren();
+    settingsMenu.appendChild(createSettingsElement(
+        svgSpeedIcon, "Скорость воспроизведения", `${videoSpeed}x`, svgChevronRight,
+        1, 1, () => setTimeout(() => settingsMenuSpeedClick(), 10),
+    ));
+    settingsMenu.appendChild(createSettingsElement(
+        svgQualityIcon, "Качество", `${currentQuality}p`, svgChevronRight,
+        1, 1, () => setTimeout(() => settingsMenuQualityClick(), 10),
+    ));
 }
 
 //========//
