@@ -601,23 +601,14 @@ const svgFullscreenOff = `<svg width="24" height="24" viewBox="0 0 24 24" fill="
 const svgFullscreenOn = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 19H10V22H2V19Z" fill="white"/><path d="M2 14H5V22H2V14Z" fill="white"/><path d="M2 2H10V5H2V2Z" fill="white"/><path d="M2 2H5V10H2V2Z" fill="white"/><path d="M14 2H22V5H14V2Z" fill="white"/><path d="M19 2H22V10H19V2Z" fill="white"/><path d="M14 19H22V22H14V19Z" fill="white"/><path d="M19 14H22V22H19V14Z" fill="white"/></svg>`;
 
 function toggleFullscreen(): void {
-    const isCurrentlyFullscreen = !!(
-        document.fullscreenElement ||
-        (document as any).mozFullScreenElement ||
-        (document as any).webkitFullscreenElement ||
-        (document as any).msFullscreenElement
-    );
-
-    if (!isCurrentlyFullscreen) {
-        if (videoplayerContainer.requestFullscreen) videoplayerContainer.requestFullscreen();
+    if (!isFullscreen()) {
+        if (videoplayerContainer.requestFullscreen) videoplayerContainer.requestFullscreen().then(() => {
+        });
         else if ((videoplayerContainer as any).mozRequestFullScreen) (videoplayerContainer as any).mozRequestFullScreen();
         else if ((videoplayerContainer as any).webkitRequestFullscreen) (videoplayerContainer as any).webkitRequestFullscreen();
         else if ((videoplayerContainer as any).msRequestFullscreen) (videoplayerContainer as any).msRequestFullscreen();
 
-        if (screen.orientation?.lock) {
-            screen.orientation.lock("landscape").catch((e) => console.error(e));
-        }
-        fullscreenButton.innerHTML = svgFullscreenOff;
+        screen.orientation?.lock("landscape").catch((e) => console.error(e));
     } else {
         if (document.exitFullscreen) document.exitFullscreen().then(() => {
         });
@@ -625,9 +616,21 @@ function toggleFullscreen(): void {
         else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
         else if ((document as any).msExitFullscreen) (document as any).msExitFullscreen();
 
-        if (screen.orientation?.unlock) screen.orientation.unlock();
-        fullscreenButton.innerHTML = svgFullscreenOn;
+        screen.orientation?.unlock();
     }
+}
+
+function handleFullscreenChange(): void {
+    fullscreenButton.innerHTML = isFullscreen() ? svgFullscreenOff : svgFullscreenOn;
+}
+
+function isFullscreen(): boolean {
+    return !!(
+        document.fullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).msFullscreenElement
+    );
 }
 
 fullscreenButton.addEventListener("click", toggleFullscreen);
@@ -637,16 +640,6 @@ document.addEventListener("keydown", (event) => {
         toggleFullscreen();
     }
 });
-
-function handleFullscreenChange(): void {
-    const isFs = !!(
-        document.fullscreenElement ||
-        (document as any).mozFullScreenElement ||
-        (document as any).webkitFullscreenElement ||
-        (document as any).msFullscreenElement
-    );
-    fullscreenButton.innerHTML = isFs ? svgFullscreenOff : svgFullscreenOn;
-}
 
 document.addEventListener("fullscreenchange", handleFullscreenChange);
 document.addEventListener("mozfullscreenchange", handleFullscreenChange);
