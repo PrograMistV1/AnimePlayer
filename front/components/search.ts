@@ -1,6 +1,7 @@
-import { getAnimeInfo, getAnimeLink, searchAnime } from "../api/animeApi.ts";
-import type { KodikInfo, Translation } from "../types.ts";
-import {currentQuality, seriaData, setQualities, setVideoLink} from "../state/playerState.ts";
+import {getAnimeInfo, getAnimeLink, searchAnime} from "../api/animeApi.ts";
+import type {KodikInfo, Translation} from "../types.ts";
+import {getCurrentQuality, seriaData, setQualities, setVideoLink} from "../state/playerState.ts";
+import {loadVideo} from "./videoPlayer.ts";
 
 const animeInfoTitle = document.querySelector<HTMLElement>("#anime-info-title")!;
 const animeInfoImg = document.querySelector<HTMLImageElement>("#anime-info-img")!;
@@ -10,7 +11,6 @@ const seriesList = document.querySelector<HTMLElement>("#series")!;
 const seriaTitle = document.querySelector<HTMLElement>("#seria-title")!;
 const searchInput = document.querySelector<HTMLInputElement>("#search-input")!;
 const searchResultsList = document.querySelector<HTMLElement>("#search-results")!;
-const videoS = document.querySelector<HTMLVideoElement>("#video")!;
 
 function transNameToEpCount(translation: string): number[] {
     const match = translation.match(/(\d+)[~-](\d+) эп\.\)|(\d+) эп\./);
@@ -20,7 +20,7 @@ function transNameToEpCount(translation: string): number[] {
     return [];
 }
 
-export { transNameToEpCount };
+export {transNameToEpCount};
 
 function debounce<T extends (...args: any[]) => void>(func: T, delay: number): T {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -100,7 +100,7 @@ export async function chooseAnime(results: {
     }
 
     try {
-        const { kodikInfo, shikimoriInfo } = await getAnimeInfo(results.shikimori_id);
+        const {kodikInfo, shikimoriInfo} = await getAnimeInfo(results.shikimori_id);
         animeInfoImg.src = shikimoriInfo?.poster ?? "";
 
         if (!kodikInfo) {
@@ -134,7 +134,7 @@ export async function chooseAnime(results: {
 }
 
 export async function setUrl(): Promise<void> {
-    const { shikimoriId, translationId, seriaNum } = seriaData;
+    const {shikimoriId, translationId, seriaNum} = seriaData;
     if (shikimoriId === undefined || translationId === undefined || seriaNum === undefined) return;
 
     try {
@@ -142,15 +142,7 @@ export async function setUrl(): Promise<void> {
 
         setVideoLink(data.link);
         setQualities(data.qualities);
-
-        while (videoS.firstChild) videoS.removeChild(videoS.firstChild);
-
-        const source = document.createElement("source");
-        source.type = "video/mp4";
-        source.src = `https:${data.link}${currentQuality}.mp4`;
-        source.id = "video-source";
-        videoS.appendChild(source);
-        videoS.load();
+        loadVideo(getCurrentQuality());
     } catch (e) {
         console.error("Ошибка получения ссылки:", e);
     }

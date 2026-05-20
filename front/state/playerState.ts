@@ -8,9 +8,43 @@ export const seriaData: SeriaData = {
     translationName: undefined,
 };
 
-export let currentVideoLink: string = "";
-export let currentQuality: number = 0;
-export let availableQualities: number[] = [];
+export const videoState = {
+    isPlaying: false,
+    isEnded: false,
+    isStarted: false,
+    speed: 1,
+    volume: 1,
+    savedVolume: 1,
+};
+
+let _currentVideoLink: string = "";
+let _currentQuality: number = 0;
+let _availableQualities: number[] = [];
+
+export function getCurrentVideoLink(): string {
+    return _currentVideoLink;
+}
+
+export function getCurrentQuality(): number {
+    return _currentQuality;
+}
+
+export function getAvailableQualities(): number[] {
+    return _availableQualities;
+}
+
+export function setVideoLink(link: string): void {
+    _currentVideoLink = link;
+}
+
+export function setQualities(qualities: number[]): void {
+    _availableQualities = qualities;
+    _currentQuality = qualities[0] ?? 0;
+}
+
+export function setCurrentQuality(quality: number): void {
+    _currentQuality = quality;
+}
 
 let _AnimeData: AnimeData | null = null;
 let _loadedData: AnimeData | null = null;
@@ -35,17 +69,4 @@ export function syncLoadedData(): void {
 
 export function isDataChanged(): boolean {
     return JSON.stringify(_AnimeData) !== JSON.stringify(_loadedData);
-}
-
-export function setVideoLink(link: string): void {
-    currentVideoLink = link;
-}
-
-export function setQualities(qualities: number[]): void {
-    availableQualities = qualities;
-    currentQuality = qualities[0] ?? 0;
-}
-
-export function setCurrentQuality(quality: number): void {
-    currentQuality = quality;
 }

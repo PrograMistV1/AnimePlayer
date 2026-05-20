@@ -1,4 +1,9 @@
-import {currentQuality, currentVideoLink, setCurrentQuality} from "../state/playerState.ts";
+import {
+    getAvailableQualities,
+    getCurrentQuality,
+    getCurrentVideoLink,
+    setCurrentQuality
+} from "../state/playerState.ts";
 
 const video = document.querySelector<HTMLVideoElement>("#video")!;
 const videoplayerContainer = document.querySelector<HTMLElement>("#videoplayer")!;
@@ -91,6 +96,25 @@ videoplayerContainer.addEventListener("touchstart", (event) => {
 let hideStartPlayErrorTimeout: ReturnType<typeof setTimeout> | undefined;
 let hide2StartPlayErrorTimeout: ReturnType<typeof setTimeout> | undefined;
 
+export function loadVideo(quality: number, restoreTime?: number, autoplay?: boolean): void {
+    setCurrentQuality(quality);
+
+    while (video.firstChild) video.removeChild(video.firstChild);
+    const source = document.createElement("source");
+    source.type = "video/mp4";
+    source.src = `https:${getCurrentVideoLink()}${quality}.mp4`;
+    source.id = "video-source";
+    video.appendChild(source);
+    video.load();
+
+    if (restoreTime !== undefined || autoplay) {
+        video.addEventListener("loadeddata", () => {
+            if (restoreTime !== undefined) video.currentTime = restoreTime;
+            if (autoplay) videoPlay();
+        }, {once: true});
+    }
+}
+
 function showStartPlayError(): void {
     clearTimeout(hideStartPlayErrorTimeout);
     clearTimeout(hide2StartPlayErrorTimeout);
@@ -107,7 +131,7 @@ function showStartPlayError(): void {
 }
 
 function tryStartPlay(): void {
-    if (currentVideoLink) {
+    if (getCurrentVideoLink()) {
         videoPlay();
         startPlayContainer.style.display = "none";
         videoIsStarted = true;
@@ -146,7 +170,8 @@ document.addEventListener("keydown", (event) => {
 function videoPlay(): void {
     playButtonLeftStick.classList.remove("play");
     playButtonRightStick.classList.remove("play");
-    video.play();
+    video.play().then(() => {
+    });
     isPlay = true;
     showToolbarTimeoutDisplay = setTimeout(() => hideToolbar(), 2000);
     if (isEnded) {
@@ -507,7 +532,7 @@ function renderSettings(): void {
         1, 1, () => setTimeout(() => settingsMenuSpeedClick(), 10),
     ));
     settingsMenu.appendChild(createSettingsElement(
-        svgQualityIcon, "Качество", `${currentQuality}p`, svgChevronRight,
+        svgQualityIcon, "Качество", `${getCurrentQuality()}p`, svgChevronRight,
         1, 1, () => setTimeout(() => settingsMenuQualityClick(), 10),
     ));
 }
@@ -561,11 +586,9 @@ function settingsMenuQualityClick(): void {
     backButton.addEventListener("click", () => setSettingsMenuDefault(false));
     settingsMenu.appendChild(backButton);
 
-    // TODO: заменить на availableQualities из стейта
-    const qualitiesArray = [720, 480, 360];
-    for (const quality of qualitiesArray) {
+    for (const quality of getAvailableQualities()) {
         settingsMenu.appendChild(createSettingsElement(
-            quality === currentQuality ? svgCheckIcon : "", `${quality}p`, "", "",
+            quality === getCurrentQuality() ? svgCheckIcon : "", `${quality}p`, "", "",
             2, 1, settingsSetQuality, quality,
         ));
     }
@@ -573,24 +596,8 @@ function settingsMenuQualityClick(): void {
 
 function settingsSetQuality(args: SettingsClickArgs): void {
     setSettingsCheckmark(args.element);
-    setCurrentQuality(args.args as number);
-
     const currentTime = video.currentTime;
-    const wasPlaying = isPlay;
-
-    while (video.firstChild) video.removeChild(video.firstChild);
-    const source = document.createElement("source");
-    source.type = "video/mp4";
-    source.src = `https:${currentVideoLink}${currentQuality}.mp4`;
-    source.id = "video-source";
-    video.appendChild(source);
-    video.load();
-
-    video.addEventListener("loadeddata", () => {
-        video.currentTime = currentTime;
-        if (wasPlaying) videoPlay();
-    }, {once: true});
-
+    loadVideo(args.args as number, currentTime, isPlay);
     setSettingsMenuDefault(true);
 }
 
@@ -620,7 +627,8 @@ function toggleFullscreen(): void {
         }
         fullscreenButton.innerHTML = svgFullscreenOff;
     } else {
-        if (document.exitFullscreen) document.exitFullscreen();
+        if (document.exitFullscreen) document.exitFullscreen().then(() => {
+        });
         else if ((document as any).mozCancelFullScreen) (document as any).mozCancelFullScreen();
         else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
         else if ((document as any).msExitFullscreen) (document as any).msExitFullscreen();
