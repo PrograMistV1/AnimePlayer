@@ -10,6 +10,7 @@ export const seriaData: SeriaData = {
 
 export const videoState = {
     isPlaying: false,
+    intentPlaying: true,
     isEnded: false,
     isStarted: false,
     speed: 1,

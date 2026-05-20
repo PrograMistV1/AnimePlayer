@@ -2,7 +2,8 @@ import {
     getAvailableQualities,
     getCurrentQuality,
     getCurrentVideoLink,
-    setCurrentQuality
+    setCurrentQuality,
+    videoState
 } from "../state/playerState.ts";
 
 const video = document.querySelector<HTMLVideoElement>("#video")!;
@@ -40,7 +41,6 @@ let showToolbarTimeout: ReturnType<typeof setTimeout> | undefined;
 let showToolbarTimeoutDisplay: ReturnType<typeof setTimeout> | undefined;
 let toolbarIsHide = false;
 let settingsButtonIsClicked = true;
-let videoIsStarted = false;
 
 function hideToolbar(): void {
     if (hideToolbarTimeout) clearTimeout(hideToolbarTimeout);
@@ -64,7 +64,7 @@ function showToolbar(): void {
 }
 
 videoplayerContainer.addEventListener("mousemove", () => {
-    if (settingsButtonIsClicked && videoIsStarted) {
+    if (settingsButtonIsClicked && videoState.isStarted) {
         showToolbar();
         if (showToolbarTimeoutDisplay) clearTimeout(showToolbarTimeoutDisplay);
         showToolbarTimeoutDisplay = setTimeout(() => hideToolbar(), 2000);
@@ -72,7 +72,7 @@ videoplayerContainer.addEventListener("mousemove", () => {
 });
 
 videoplayerContainer.addEventListener("touchstart", (event) => {
-    if (toolbarIsHide && videoIsStarted) {
+    if (toolbarIsHide && videoState.isStarted) {
         showToolbar();
     } else if (
         event.target !== toolbar &&
@@ -134,7 +134,7 @@ function tryStartPlay(): void {
     if (getCurrentVideoLink()) {
         videoPlay();
         startPlayContainer.style.display = "none";
-        videoIsStarted = true;
+        videoState.isStarted = true;
     } else {
         showStartPlayError();
     }
@@ -147,8 +147,6 @@ startPlayButton.addEventListener("touchend", tryStartPlay);
 //RESTART VIDEO//
 //=============//
 
-let isEnded = false;
-
 restartVideoButton.addEventListener("click", () => {
     video.currentTime = 0;
     videoPlay();
@@ -159,12 +157,9 @@ restartVideoButton.addEventListener("click", () => {
 //PLAY PAUSE//
 //==========//
 
-let isPlay = false;
-let globalIsPlay = true;
-
 document.querySelector<HTMLElement>("#pause-play")!.onclick = playOrPause;
 document.addEventListener("keydown", (event) => {
-    if (event.code === "Space" && videoIsStarted) playOrPause();
+    if (event.code === "Space" && videoState.isStarted) playOrPause();
 });
 
 function videoPlay(): void {
@@ -172,11 +167,11 @@ function videoPlay(): void {
     playButtonRightStick.classList.remove("play");
     video.play().then(() => {
     });
-    isPlay = true;
+    videoState.isPlaying = true;
     showToolbarTimeoutDisplay = setTimeout(() => hideToolbar(), 2000);
-    if (isEnded) {
+    if (videoState.isEnded) {
         restartVideoContainer.style.display = "none";
-        isEnded = false;
+        videoState.isEnded = false;
     }
 }
 
@@ -184,19 +179,19 @@ function videoPause(): void {
     playButtonLeftStick.classList.add("play");
     playButtonRightStick.classList.add("play");
     video.pause();
-    isPlay = false;
+    videoState.isPlaying = false;
     if (showToolbarTimeoutDisplay) clearTimeout(showToolbarTimeoutDisplay);
     showToolbar();
 }
 
 function playOrPause(): void {
-    if (isPlay) {
+    if (videoState.isPlaying) {
         videoPause();
-        globalIsPlay = false;
+        videoState.intentPlaying = false;
         return;
     }
     videoPlay();
-    globalIsPlay = true;
+    videoState.intentPlaying = true;
 }
 
 if ("mediaSession" in navigator) {
@@ -206,19 +201,17 @@ if ("mediaSession" in navigator) {
     });
     navigator.mediaSession.setActionHandler("play", () => {
         videoPlay();
-        globalIsPlay = true;
+        videoState.intentPlaying = true;
     });
     navigator.mediaSession.setActionHandler("pause", () => {
         videoPause();
-        globalIsPlay = false;
+        videoState.intentPlaying = false;
     });
 }
 
 //======//
 //VOLUME//
 //======//
-
-let videoVolumeValue = 1;
 
 document.querySelector<HTMLElement>("#volume-container")!.onmouseenter = () => {
     volumeRange.classList.remove("volume-range-hiden");
@@ -230,10 +223,10 @@ document.querySelector<HTMLElement>("#left-buttons")!.onmouseleave = () => {
 volumeButton.addEventListener("click", () => {
     let val: number;
     if (video.volume > 0) {
-        videoVolumeValue = video.volume;
+        videoState.savedVolume = video.volume;
         val = 0;
     } else {
-        val = videoVolumeValue;
+        val = videoState.savedVolume;
     }
     volumeRange.value = String(val * 100);
     volumeRange.style.background = `linear-gradient(to right, #ffffff ${val * 100}%, transparent ${val * 100}%)`;
@@ -274,7 +267,7 @@ video.addEventListener("loadeddata", () => {
     barUpdate();
 });
 video.addEventListener("loadstart", () => {
-    if (isPlay) playOrPause();
+    if (videoState.isPlaying) playOrPause();
 });
 video.addEventListener("waiting", () => {
     if (!videoProgressBarIsMouseDown) spinner.style.display = "";
@@ -285,9 +278,9 @@ video.addEventListener("playing", () => {
 video.ontimeupdate = () => barUpdate();
 video.addEventListener("ended", () => {
     videoPause();
-    globalIsPlay = false;
+    videoState.intentPlaying = false;
     restartVideoContainer.style.display = "";
-    isEnded = true;
+    videoState.isEnded = true;
 });
 
 function formatTime(time: number): string {
@@ -349,7 +342,7 @@ videoProgressBar.addEventListener("pointerdown", (event) => {
 });
 document.addEventListener("pointerup", () => {
     if (videoProgressBarIsMouseDown) {
-        if (globalIsPlay) videoPlay();
+        if (videoState.intentPlaying) videoPlay();
         video.currentTime = video.duration * lastProgressBarValue;
     }
     videoProgressBarIsMouseDown = false;
@@ -370,7 +363,7 @@ videoProgressBar.addEventListener("touchstart", (event) => {
 });
 document.addEventListener("touchend", () => {
     if (videoProgressBarIsMouseDown) {
-        if (globalIsPlay) videoPlay();
+        if (videoState.intentPlaying) videoPlay();
         video.currentTime = video.duration * lastProgressBarValue;
     }
     videoProgressBarIsMouseDown = false;
@@ -397,9 +390,9 @@ function videoRewind(event: { clientX: number }): void {
     videoProgressBarCircle.style.transform = `translateX(${offsetX}px)`;
     progressUpdate(video.duration * value);
 
-    if (isEnded) {
+    if (videoState.isEnded) {
         restartVideoContainer.style.display = "none";
-        isEnded = false;
+        videoState.isEnded = false;
     }
 
     const now = Date.now();
@@ -425,7 +418,6 @@ const svgQualityIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="no
 const svgCheckIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9.55001 18L3.85001 12.3L5.27501 10.875L9.55001 15.15L18.725 5.975L20.15 7.4L9.55001 18Z" fill="white"/></svg>`;
 
 let settingsDefaultState = true;
-let videoSpeed = 1;
 
 settingsButton.addEventListener("click", () => {
     if (settingsButtonIsClicked) {
@@ -456,7 +448,7 @@ document.addEventListener("click", (event) => {
     ) {
         setSettingsMenuDefault(true);
         showToolbarTimeoutDisplay = setTimeout(() => {
-            if (isPlay) hideToolbar();
+            if (videoState.isPlaying) hideToolbar();
         }, 2000);
     }
 });
@@ -528,7 +520,7 @@ function renderSettings(): void {
     settingsMenu.style.width = "300px";
     settingsMenu.replaceChildren();
     settingsMenu.appendChild(createSettingsElement(
-        svgSpeedIcon, "Скорость воспроизведения", `${videoSpeed}x`, svgChevronRight,
+        svgSpeedIcon, "Скорость воспроизведения", `${videoState.speed}x`, svgChevronRight,
         1, 1, () => setTimeout(() => settingsMenuSpeedClick(), 10),
     ));
     settingsMenu.appendChild(createSettingsElement(
@@ -552,7 +544,7 @@ function settingsMenuSpeedClick(): void {
 
     for (const speed of [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]) {
         settingsMenu.appendChild(createSettingsElement(
-            speed === videoSpeed ? svgCheckIcon : "", `${speed}x`, "", "",
+            speed === videoState.speed ? svgCheckIcon : "", `${speed}x`, "", "",
             2, 1, settingsSetSpeed, speed,
         ));
     }
@@ -561,7 +553,7 @@ function settingsMenuSpeedClick(): void {
 function settingsSetSpeed(args: SettingsClickArgs): void {
     setSettingsCheckmark(args.element);
     video.playbackRate = args.args as number;
-    videoSpeed = args.args as number;
+    videoState.speed = args.args as number;
 }
 
 function setSettingsCheckmark(element: HTMLElement): void {
@@ -597,7 +589,7 @@ function settingsMenuQualityClick(): void {
 function settingsSetQuality(args: SettingsClickArgs): void {
     setSettingsCheckmark(args.element);
     const currentTime = video.currentTime;
-    loadVideo(args.args as number, currentTime, isPlay);
+    loadVideo(args.args as number, currentTime, videoState.isPlaying);
     setSettingsMenuDefault(true);
 }
 
@@ -666,15 +658,15 @@ document.addEventListener("msfullscreenchange", handleFullscreenChange);
 //============//
 
 document.addEventListener("keydown", (event) => {
-    if (event.code === "ArrowLeft" && videoIsStarted) leftFastForward();
-    else if (event.code === "ArrowRight" && videoIsStarted) rightFastForward();
+    if (event.code === "ArrowLeft" && videoState.isStarted) leftFastForward();
+    else if (event.code === "ArrowRight" && videoState.isStarted) rightFastForward();
 });
 
 let lastTapTime = 0;
 const doubleTapDelay = 200;
 
 videoplayerContainer.addEventListener("touchstart", (event) => {
-    if (videoIsStarted && event.target !== toolbar && !toolbar.contains(event.target as Node)) {
+    if (videoState.isStarted && event.target !== toolbar && !toolbar.contains(event.target as Node)) {
         const now = Date.now();
         const tapDistance = now - lastTapTime;
         const rect = videoplayerContainer.getBoundingClientRect();
@@ -714,9 +706,9 @@ const rightTimeout = {value: rightFastForwardTimeout};
 function leftFastForward(): void {
     showFastForward(leftFastForwardElement, leftTimeout);
     video.currentTime -= 10;
-    if (isEnded) {
+    if (videoState.isEnded) {
         restartVideoContainer.style.display = "none";
-        isEnded = false;
+        videoState.isEnded = false;
     }
 }
 
