@@ -32,7 +32,6 @@ const rightFastForwardElement = document.querySelector<HTMLElement>("#fast-forwa
 
 let hideToolbarTimeout: ReturnType<typeof setTimeout> | undefined;
 let showToolbarTimeout: ReturnType<typeof setTimeout> | undefined;
-let hideToolbarTimeoutDisplay: ReturnType<typeof setTimeout> | undefined;
 let showToolbarTimeoutDisplay: ReturnType<typeof setTimeout> | undefined;
 let toolbarIsHide = false;
 let settingsButtonIsClicked = true;
@@ -204,7 +203,13 @@ document.querySelector<HTMLElement>("#left-buttons")!.onmouseleave = () => {
 };
 
 volumeButton.addEventListener("click", () => {
-    const val = video.volume > 0 ? (videoVolumeValue = video.volume, 0) : videoVolumeValue;
+    let val: number;
+    if (video.volume > 0) {
+        videoVolumeValue = video.volume;
+        val = 0;
+    } else {
+        val = videoVolumeValue;
+    }
     volumeRange.value = String(val * 100);
     volumeRange.style.background = `linear-gradient(to right, #ffffff ${val * 100}%, transparent ${val * 100}%)`;
     video.volume = val;
@@ -529,14 +534,18 @@ function settingsMenuSpeedClick(): void {
 }
 
 function settingsSetSpeed(args: SettingsClickArgs): void {
+    setSettingsCheckmark(args.element);
+    video.playbackRate = args.args as number;
+    videoSpeed = args.args as number;
+}
+
+function setSettingsCheckmark(element: HTMLElement): void {
     for (let i = 1; i < settingsMenu.children.length; i++) {
         const child = settingsMenu.children[i]?.children[0] as HTMLElement | undefined;
         if (child) child.innerHTML = "";
     }
-    const child = args.element.children[0] as HTMLElement | undefined;
+    const child = element.children[0] as HTMLElement | undefined;
     if (child) child.innerHTML = svgCheckIcon;
-    video.playbackRate = args.args as number;
-    videoSpeed = args.args as number;
 }
 
 //========//
@@ -563,12 +572,7 @@ function settingsMenuQualityClick(): void {
 }
 
 function settingsSetQuality(args: SettingsClickArgs): void {
-    for (let i = 1; i < settingsMenu.children.length; i++) {
-        const child = settingsMenu.children[i]?.children[0] as HTMLElement | undefined;
-        if (child) child.innerHTML = "";
-    }
-    const child = args.element.children[0] as HTMLElement | undefined;
-    if (child) child.innerHTML = svgCheckIcon;
+    setSettingsCheckmark(args.element);
     setCurrentQuality(args.args as number);
 
     const currentTime = video.currentTime;
@@ -711,7 +715,4 @@ function leftFastForward(): void {
 function rightFastForward(): void {
     showFastForward(rightFastForwardElement, rightTimeout);
     video.currentTime += 10;
-}
-
-export function initVideoPlayer(): void {
 }
