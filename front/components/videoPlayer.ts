@@ -337,8 +337,8 @@ videoProgressBar.addEventListener("pointerdown", (event) => {
 });
 document.addEventListener("pointerup", () => {
     if (videoProgressBarIsMouseDown) {
-        if (videoState.intentPlaying) videoPlay();
         video.currentTime = video.duration * lastProgressBarValue;
+        if (videoState.intentPlaying) videoPlay();
     }
     videoProgressBarIsMouseDown = false;
 });
@@ -350,19 +350,6 @@ document.addEventListener("pointermove", (event) => {
     }
 });
 
-videoProgressBar.addEventListener("touchstart", (event) => {
-    videoProgressBarIsMouseDown = true;
-    videoPause();
-    const touch = event.touches[0];
-    if (touch) videoRewind(touch);
-});
-document.addEventListener("touchend", () => {
-    if (videoProgressBarIsMouseDown) {
-        if (videoState.intentPlaying) videoPlay();
-        video.currentTime = video.duration * lastProgressBarValue;
-    }
-    videoProgressBarIsMouseDown = false;
-});
 document.addEventListener("touchmove", (event) => {
     const now = Date.now();
     if (videoProgressBarIsMouseDown && now - lastTimeVideoRewind >= throttleRate) {

@@ -102,7 +102,7 @@ if (isWatch) {
 
     const { port: esbuildPort } = await ctx.serve({
         servedir: outDir,
-        host: "127.0.0.1",
+        host: "0.0.0.0",
     });
 
     const DEV_PORT = 5173;

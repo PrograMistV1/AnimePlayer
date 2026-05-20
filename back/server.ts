@@ -44,6 +44,6 @@ app.use((_req, res) => {
     res.sendFile(path.join(__dirname, "../dist/public/index.html"));
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server started on http://localhost:${PORT}`);
 });
