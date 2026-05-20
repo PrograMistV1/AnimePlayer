@@ -57,8 +57,15 @@ async function link(req: Request, res: Response) {
     }
 
     try {
-        const [link, quality] = await parser.getLink(shikimoriId, "shikimori", Number(seriaNum), translationId);
-        const qualities = [720, 480, 360].filter(q => q <= quality);
+        const [link] = await parser.getLink(shikimoriId, "shikimori", Number(seriaNum), translationId);
+        const dirRes = await fetch(`https:${link}`);
+        const html = await dirRes.text();
+
+        const qualities = [...html.matchAll(/href="[^"]*\/(\d+)\.mp4"/g)]
+            .map(m => m[1])
+            .filter((q): q is string => q !== undefined)
+            .map(q => parseInt(q, 10));
+
         res.json({link, qualities});
     } catch (error) {
         const err = error as Error;
