@@ -16,6 +16,7 @@ export const videoState = {
     speed: 1,
     volume: 1,
     savedVolume: 1,
+    isChangingQuality: false,
 };
 
 let _currentVideoLink: string = "";
@@ -39,8 +40,8 @@ export function setVideoLink(link: string): void {
 }
 
 export function setQualities(qualities: number[]): void {
-    _availableQualities = qualities;
-    _currentQuality = qualities[0] ?? 0;
+    _availableQualities = [...qualities].sort((a, b) => b - a);
+    _currentQuality = _availableQualities[0] ?? 0;
 }
 
 export function setCurrentQuality(quality: number): void {

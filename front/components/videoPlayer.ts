@@ -97,6 +97,7 @@ let hideStartPlayErrorTimeout: ReturnType<typeof setTimeout> | undefined;
 let hide2StartPlayErrorTimeout: ReturnType<typeof setTimeout> | undefined;
 
 export function loadVideo(quality: number, restoreTime?: number, autoplay?: boolean): void {
+    videoState.isChangingQuality = true;
     setCurrentQuality(quality);
 
     while (video.firstChild) video.removeChild(video.firstChild);
@@ -107,12 +108,11 @@ export function loadVideo(quality: number, restoreTime?: number, autoplay?: bool
     video.appendChild(source);
     video.load();
 
-    if (restoreTime !== undefined || autoplay) {
-        video.addEventListener("loadeddata", () => {
-            if (restoreTime !== undefined) video.currentTime = restoreTime;
-            if (autoplay) videoPlay();
-        }, {once: true});
-    }
+    video.addEventListener("loadeddata", () => {
+        videoState.isChangingQuality = false;
+        if (restoreTime !== undefined) video.currentTime = restoreTime;
+        if (autoplay) videoPlay();
+    }, {once: true});
 }
 
 function showStartPlayError(): void {
@@ -165,8 +165,7 @@ document.addEventListener("keydown", (event) => {
 function videoPlay(): void {
     playButtonLeftStick.classList.remove("play");
     playButtonRightStick.classList.remove("play");
-    video.play().then(() => {
-    });
+    video.play().catch(console.error)
     videoState.isPlaying = true;
     showToolbarTimeoutDisplay = setTimeout(() => hideToolbar(), 2000);
     if (videoState.isEnded) {
@@ -260,14 +259,12 @@ function updateVolumeSvg(value: number): void {
 //LOADING//
 //=======//
 
-let videoLenghtIsSet = false;
-
 video.addEventListener("loadeddata", () => {
-    setVideoLenght();
+    setVideoLength();
     barUpdate();
 });
 video.addEventListener("loadstart", () => {
-    if (videoState.isPlaying) playOrPause();
+    if (videoState.isPlaying && !videoState.isChangingQuality) videoPause();
 });
 video.addEventListener("waiting", () => {
     if (!videoProgressBarIsMouseDown) spinner.style.display = "";
@@ -296,14 +293,13 @@ function progressUpdate(videoCurrentTime: number): void {
     videoLengthNow.textContent = formatTime(videoCurrentTime);
 }
 
-function setVideoLenght(): void {
+function setVideoLength(): void {
     const duration = video.duration;
     if (!duration) {
         document.querySelector<HTMLElement>("#video-length-all")!.textContent = formatTime(0);
         return;
     }
     document.querySelector<HTMLElement>("#video-length-all")!.textContent = formatTime(duration);
-    videoLenghtIsSet = true;
 }
 
 function barUpdate(): void {
@@ -315,7 +311,6 @@ function barUpdate(): void {
     for (let i = 0; i < buffered.length; i++) {
         videoProgressBarLoad.style.width = `${(buffered.end(i) / video.duration) * 100}%`;
     }
-    if (!videoLenghtIsSet) setVideoLenght();
 }
 
 //===========//
@@ -602,16 +597,14 @@ const svgFullscreenOn = `<svg width="24" height="24" viewBox="0 0 24 24" fill="n
 
 function toggleFullscreen(): void {
     if (!isFullscreen()) {
-        if (videoplayerContainer.requestFullscreen) videoplayerContainer.requestFullscreen().then(() => {
-        });
+        if (videoplayerContainer.requestFullscreen) videoplayerContainer.requestFullscreen().catch(console.error);
         else if ((videoplayerContainer as any).mozRequestFullScreen) (videoplayerContainer as any).mozRequestFullScreen();
         else if ((videoplayerContainer as any).webkitRequestFullscreen) (videoplayerContainer as any).webkitRequestFullscreen();
         else if ((videoplayerContainer as any).msRequestFullscreen) (videoplayerContainer as any).msRequestFullscreen();
 
         screen.orientation?.lock("landscape").catch((e) => console.error(e));
     } else {
-        if (document.exitFullscreen) document.exitFullscreen().then(() => {
-        });
+        if (document.exitFullscreen) document.exitFullscreen().catch(console.error);
         else if ((document as any).mozCancelFullScreen) (document as any).mozCancelFullScreen();
         else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
         else if ((document as any).msExitFullscreen) (document as any).msExitFullscreen();
