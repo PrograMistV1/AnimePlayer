@@ -31,6 +31,19 @@ const videoProgressBarValue = document.querySelector<HTMLElement>("#progress-bar
 const fullscreenButton = document.querySelector<HTMLElement>("#fullscreen-button")!;
 const leftFastForwardElement = document.querySelector<HTMLElement>("#fast-forward-left")!;
 const rightFastForwardElement = document.querySelector<HTMLElement>("#fast-forward-right")!;
+const pipButton = document.querySelector<HTMLElement>("#pip-button")!;
+
+if (!document.pictureInPictureEnabled) {
+    pipButton.style.display = "none";
+}
+
+pipButton.addEventListener("click", async () => {
+    if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+    } else {
+        await video.requestPictureInPicture();
+    }
+});
 
 //============//
 //HIDE TOOLBAR//

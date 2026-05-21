@@ -328,6 +328,15 @@
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
 }
+.pip-button {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: none;
+    background: none;
+}
 @media (hover: hover) {
     .settings-menu-item:hover {
         background: rgba(255, 255, 255, 0.1);
