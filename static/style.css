@@ -37,28 +37,8 @@ body {
     overflow-x: hidden;
 }
 
-body::before {
-    content: '';
-    position: fixed;
-    top: -200px;
-    right: -200px;
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(108, 63, 197, 0.12) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-}
-
-body::after {
-    content: '';
-    position: fixed;
-    bottom: -200px;
-    left: -200px;
-    width: 500px;
-    height: 500px;
-    background: radial-gradient(circle, rgba(45, 27, 105, 0.15) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
+.page-wrapper {
+    padding: 0 24px;
 }
 
 /* ============ */
@@ -66,14 +46,9 @@ body::after {
 /* ============ */
 
 .search-field {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: rgba(8, 4, 18, 0.85);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border-bottom: 1px solid var(--border);
-    padding: 14px 20px;
+    background: var(--bg-base);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
 .search-field h2 {
@@ -85,9 +60,12 @@ body::after {
 }
 
 .search-input-wrapper {
-    position: relative;
-    max-width: 640px;
+    width: 50%;
+    min-width: 300px;
     margin: 0 auto;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 14px;
+    padding-top: 14px;
 }
 
 .search-input-wrapper::before {
@@ -192,7 +170,7 @@ body::after {
 /* ====================== */
 
 .continue-watching-wrapper {
-    padding: 24px 20px 8px;
+    padding: 24px 0 8px;
     position: relative;
     z-index: 1;
 }
@@ -336,7 +314,7 @@ body::after {
 /* ============== */
 
 .anime-info-field {
-    margin: 16px 20px;
+    margin: 16px 0;
     border-radius: var(--radius-lg);
     overflow: hidden;
     background: var(--bg-card);
@@ -352,11 +330,13 @@ body::after {
 
 .anime-info-inner {
     display: flex;
+    align-items: stretch;
 }
 
 .anime-info-img-container {
-    width: 130px;
+    width: clamp(180px, 28vw, 320px);
     flex-shrink: 0;
+    overflow: hidden;
 }
 
 .anime-info-img {
@@ -364,8 +344,6 @@ body::after {
     height: 100%;
     object-fit: cover;
     display: block;
-    min-height: 180px;
-    background: linear-gradient(135deg, #2d1b69, #6c3fc5);
 }
 
 .anime-info {
@@ -382,7 +360,7 @@ body::after {
 }
 
 .anime-meta-row {
-    font-size: 11px;
+    font-size: 16px;
     color: var(--text-muted);
     margin-bottom: 10px;
 }
@@ -404,14 +382,15 @@ body::after {
 }
 
 .anime-description {
-    font-size: 11px;
+    font-size: 14px;
     color: var(--text-secondary);
     line-height: 1.6;
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    max-height: 200px;
     margin-bottom: 14px;
+    white-space: pre-line;
 }
 
 .anime-rating {
@@ -423,7 +402,7 @@ body::after {
 
 .star {
     color: #f59e0b;
-    font-size: 12px;
+    font-size: 20px;
 }
 
 .star.empty {
@@ -490,7 +469,7 @@ body::after {
 /* =================== */
 
 .translations-field {
-    margin: 0 20px 16px;
+    margin: 0 0 16px;
     position: relative;
     z-index: 1;
 }
@@ -503,10 +482,24 @@ body::after {
 }
 
 #translations {
-    list-style: none;
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+    max-height: 96px;
+    overflow-y: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(108, 63, 197, 0.3) transparent;
+    overscroll-behavior: contain;
+}
+
+#translations::-webkit-scrollbar {
+    width: 4px;
+}
+
+#translations::-webkit-scrollbar-thumb {
+    background: rgba(108, 63, 197, 0.3);
+    border-radius: 2px;
 }
 
 #translations li {
@@ -537,7 +530,7 @@ body::after {
 /* ============= */
 
 .seria-field {
-    margin: 0 20px 16px;
+    margin: 0 0 16px;
     position: relative;
     z-index: 1;
 }
@@ -607,7 +600,7 @@ body::after {
 /* =================== */
 
 .videoplayer-container {
-    margin: 0 20px 20px;
+    margin: 0 0 20px;
     border-radius: var(--radius-xl);
     overflow: hidden;
     border: 1px solid var(--border);
@@ -673,13 +666,14 @@ body::after {
 
     .anime-info-img-container {
         width: 100%;
-        max-height: 200px;
-        overflow: hidden;
+        height: 220px;
     }
 
     .anime-info-img {
-        min-height: unset;
-        height: 200px;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: #111;
     }
 
     .videoplayer-container {

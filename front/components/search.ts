@@ -11,6 +11,11 @@ const seriesList = document.querySelector<HTMLElement>("#series")!;
 const seriaTitle = document.querySelector<HTMLElement>("#seria-title")!;
 const searchInput = document.querySelector<HTMLInputElement>("#search-input")!;
 const searchResultsList = document.querySelector<HTMLElement>("#search-results")!;
+const animeInfoField = document.querySelector<HTMLElement>("#anime-info-field")!;
+const animeMetaRow = document.querySelector<HTMLElement>("#anime-meta-row")!;
+const animeGenres = document.querySelector<HTMLElement>("#anime-genres")!;
+const animeRating = document.querySelector<HTMLElement>("#anime-rating")!;
+const animeDescription = document.querySelector<HTMLElement>("#anime-description")!;
 
 function transNameToEpCount(translation: string): number[] {
     const match = translation.match(/(\d+)[~-](\d+) эп\.\)|(\d+) эп\./);
@@ -102,6 +107,28 @@ export async function chooseAnime(results: {
     try {
         const {kodikInfo, shikimoriInfo} = await getAnimeInfo(results.shikimori_id);
         animeInfoImg.src = shikimoriInfo?.poster ?? "";
+
+        animeInfoField.classList.add("visible");
+
+        if (shikimoriInfo) {
+            const [aired, total] = shikimoriInfo.episodes ?? [];
+            animeMetaRow.textContent = [
+                shikimoriInfo.type,
+                shikimoriInfo.status,
+                aired ? total && total !== "?" ? `${aired}/${total} эп.` : `${aired} эп.` : null
+            ].filter(Boolean).join(" · ");
+
+            animeGenres.innerHTML = (shikimoriInfo.genres ?? [])
+                .map(g => `<span class="genre-tag">${g}</span>`)
+                .join("");
+
+            const stars = Math.round(shikimoriInfo.rating / 2);
+            animeRating.innerHTML = Array.from({length: 5}, (_, i) =>
+                `<span class="star${i < stars ? "" : " empty"}">★</span>`
+            ).join("") + `<span class="rating-value">${shikimoriInfo.rating.toFixed(1)}</span>`;
+
+            animeDescription.textContent = shikimoriInfo.description?.join("\n\n") ?? "";
+        }
 
         if (!kodikInfo) {
             animeInfoTitle.textContent = `${results.title} АНИМЕ НЕ НАЙДЕНО В БАЗЕ KODIK`;
