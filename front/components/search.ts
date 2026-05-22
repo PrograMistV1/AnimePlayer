@@ -1,5 +1,5 @@
 import {getAnimeInfo, getAnimeLink, searchAnime} from "../api/animeApi.ts";
-import type {KodikInfo, Translation} from "../types.ts";
+import type {KodikInfo, ShikimoriInfo, Translation} from "../types.ts";
 import {getCurrentQuality, seriaData, setQualities, setVideoLink} from "../state/playerState.ts";
 import {loadVideo} from "./videoPlayer.ts";
 
@@ -58,7 +58,7 @@ function renderSeriesList(count: number | null, start = 1): void {
 function chooseSeria(num: number): void {
     seriaData.seriaNum = num;
     seriaTitle.textContent = `Серия: ${num}`;
-    setUrl();
+    setUrl().then();
 }
 
 export function chooseTranslation(translation?: Translation): void {
@@ -66,7 +66,7 @@ export function chooseTranslation(translation?: Translation): void {
         translationTitle.textContent = `Озвучка: ${translation.title}`;
         seriaData.translationId = translation.id;
         seriaData.translationName = translation.title;
-        setUrl();
+        setUrl().then();
         return;
     }
     translationTitle.textContent = "Озвучка: не выбрана";
@@ -89,12 +89,12 @@ function renderTranslations(kodikInfo: KodikInfo): void {
     translationsList.appendChild(fragment);
 }
 
-export async function chooseAnime(results: {
-    shikimori_id: string;
-    title: string;
-    type?: string;
-}): Promise<void> {
+export async function chooseAnime(results: { shikimori_id: string; title: string; type?: string; }): Promise<void> {
     chooseTranslation();
+    clearAnimeCard();
+    searchResultsList.textContent = "";
+    searchInput.value = "";
+
     seriaData.shikimoriId = results.shikimori_id;
     seriaData.title = results.title;
     animeInfoTitle.textContent = results.title;
@@ -107,28 +107,9 @@ export async function chooseAnime(results: {
     try {
         const {kodikInfo, shikimoriInfo} = await getAnimeInfo(results.shikimori_id);
         animeInfoImg.src = shikimoriInfo?.poster ?? "";
-
         animeInfoField.classList.add("visible");
 
-        if (shikimoriInfo) {
-            const [aired, total] = shikimoriInfo.episodes ?? [];
-            animeMetaRow.textContent = [
-                shikimoriInfo.type,
-                shikimoriInfo.status,
-                aired ? total && total !== "?" ? `${aired}/${total} эп.` : `${aired} эп.` : null
-            ].filter(Boolean).join(" · ");
-
-            animeGenres.innerHTML = (shikimoriInfo.genres ?? [])
-                .map(g => `<span class="genre-tag">${g}</span>`)
-                .join("");
-
-            const stars = Math.round(shikimoriInfo.rating / 2);
-            animeRating.innerHTML = Array.from({length: 5}, (_, i) =>
-                `<span class="star${i < stars ? "" : " empty"}">★</span>`
-            ).join("") + `<span class="rating-value">${shikimoriInfo.rating.toFixed(1)}</span>`;
-
-            animeDescription.textContent = shikimoriInfo.description?.join("\n\n") ?? "";
-        }
+        renderAnimeCard(shikimoriInfo);
 
         if (!kodikInfo) {
             animeInfoTitle.textContent = `${results.title} АНИМЕ НЕ НАЙДЕНО В БАЗЕ KODIK`;
@@ -217,4 +198,36 @@ export function initSearch(): void {
             searchResultsList.appendChild(fragment);
         }, 300),
     );
+}
+
+function renderAnimeCard(shikimoriInfo: ShikimoriInfo | null): void {
+    if (!shikimoriInfo) return;
+
+    const [aired, total] = shikimoriInfo.episodes ?? [];
+    animeMetaRow.textContent = [
+        shikimoriInfo.type,
+        shikimoriInfo.status,
+        aired ? total && total !== "?" ? `${aired}/${total} эп.` : `${aired} эп.` : null
+    ].filter(Boolean).join(" · ");
+
+    animeGenres.innerHTML = (shikimoriInfo.genres ?? [])
+        .map((g: string) => `<span class="genre-tag">${g}</span>`)
+        .join("");
+
+    const stars = Math.round(shikimoriInfo.rating / 2);
+    animeRating.innerHTML = Array.from({length: 5}, (_, i) =>
+        `<span class="star${i < stars ? "" : " empty"}">★</span>`
+    ).join("") + `<span class="rating-value">${shikimoriInfo.rating.toFixed(1)}</span>`;
+
+    animeDescription.textContent = shikimoriInfo.description?.join("\n\n") ?? "";
+}
+
+function clearAnimeCard(): void {
+    animeInfoTitle.textContent = "";
+    animeInfoImg.src = "";
+    animeMetaRow.textContent = "";
+    animeGenres.innerHTML = "";
+    animeRating.innerHTML = "";
+    animeDescription.textContent = "";
+    animeInfoField.classList.remove("visible");
 }
