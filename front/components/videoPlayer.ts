@@ -1,12 +1,12 @@
 import {
     getAvailableQualities,
     getCurrentQuality,
-    getCurrentVideoLink,
+    getCurrentVideoLink, seriaData,
     setCurrentQuality,
     videoState
 } from "../state/playerState.ts";
 
-const video = document.querySelector<HTMLVideoElement>("#video")!;
+export const video = document.querySelector<HTMLVideoElement>("#video")!;
 const videoplayerContainer = document.querySelector<HTMLElement>("#videoplayer")!;
 const videoProgressBar = document.querySelector<HTMLElement>("#outside-progress-bar-container")!;
 const videoProgressBarCircle = document.querySelector<HTMLElement>("#progress-bar-circle-container")!;
@@ -43,6 +43,10 @@ pipButton.addEventListener("click", async () => {
     } else {
         await video.requestPictureInPicture();
     }
+});
+
+video.addEventListener("timeupdate", () => {
+    seriaData.currentTime = video.currentTime;
 });
 
 //============//

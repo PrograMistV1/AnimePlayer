@@ -1,7 +1,7 @@
 import {getAnimeInfo, getAnimeLink, searchAnime} from "../api/animeApi.ts";
 import type {KodikInfo, ShikimoriInfo, Translation} from "../types.ts";
 import {getCurrentQuality, seriaData, setQualities, setVideoLink} from "../state/playerState.ts";
-import {loadVideo} from "./videoPlayer.ts";
+import {loadVideo, video} from "./videoPlayer.ts";
 
 const animeInfoTitle = document.querySelector<HTMLElement>("#anime-info-title")!;
 const animeInfoImg = document.querySelector<HTMLImageElement>("#anime-info-img")!;
@@ -230,4 +230,38 @@ function clearAnimeCard(): void {
     animeRating.innerHTML = "";
     animeDescription.textContent = "";
     animeInfoField.classList.remove("visible");
+}
+
+export async function restoreState(): Promise<void> {
+    const {shikimoriId, title, translationId, translationName, seriaNum} = seriaData;
+    if (!shikimoriId) return;
+
+    await chooseAnime({shikimori_id: shikimoriId, title: title ?? ""});
+
+    if (translationId && translationName) {
+        seriaData.translationId = translationId;
+        seriaData.translationName = translationName;
+        translationTitle.textContent = `Озвучка: ${translationName}`;
+
+        document.querySelectorAll<HTMLElement>(".translations-item").forEach(btn => {
+            if (btn.textContent === translationName) btn.classList.add("active");
+        });
+    }
+
+    if (seriaNum !== undefined) {
+        seriaData.seriaNum = seriaNum;
+        seriaTitle.textContent = `Серия: ${seriaNum}`;
+
+        document.querySelectorAll<HTMLElement>(".seria-button").forEach(btn => {
+            if (btn.textContent === String(seriaNum)) btn.classList.add("active");
+        });
+
+        const savedTime = seriaData.currentTime;
+        if (savedTime) {
+            video.addEventListener("loadedmetadata", () => {
+                video.currentTime = savedTime;
+            }, {once: true});
+        }
+        setUrl().then();
+    }
 }

@@ -1,12 +1,25 @@
 import type {AnimeData, SeriaData} from "../types.ts";
 
-export const seriaData: SeriaData = {
+export const seriaData: SeriaData = createPersistentState<SeriaData>({
     shikimoriId: undefined,
     seriaNum: undefined,
     translationId: undefined,
     title: undefined,
     translationName: undefined,
-};
+}, "seriaData");
+
+function createPersistentState<T extends object>(initial: T, key: string): T {
+    const saved = localStorage.getItem(key);
+    const data = saved ? {...initial, ...JSON.parse(saved)} : initial;
+
+    return new Proxy(data, {
+        set(target, prop, value) {
+            (target as any)[prop] = value;
+            localStorage.setItem(key, JSON.stringify(target));
+            return true;
+        }
+    });
+}
 
 export const videoState = {
     isPlaying: false,
@@ -71,4 +84,13 @@ export function syncLoadedData(): void {
 
 export function isDataChanged(): boolean {
     return JSON.stringify(_AnimeData) !== JSON.stringify(_loadedData);
+}
+
+export function saveState(): void {
+    localStorage.setItem("seriaData", JSON.stringify(seriaData));
+}
+
+export function loadState(): SeriaData | null {
+    const saved = localStorage.getItem("seriaData");
+    return saved ? JSON.parse(saved) : null;
 }

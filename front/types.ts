@@ -57,6 +57,7 @@ export interface SeriaData {
     translationId: string | undefined;
     title: string | undefined;
     translationName: string | undefined;
+    currentTime?: number;
 }
 
 export interface AnimeLinkResponse {
