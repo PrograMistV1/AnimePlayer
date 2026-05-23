@@ -1,6 +1,6 @@
 node_modules/
-back/data.json
-back/logs
-dist
+/dist/
 .env
 .idea
+/data.json
+/logs/

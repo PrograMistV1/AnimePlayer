@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-const publicDir = "public";
+const publicDir = "front/public";
 const outDir = "dist/public";
 
 export function copyStatic() {
