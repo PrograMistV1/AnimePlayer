@@ -5,7 +5,7 @@
 	"main": "index.js",
 	"scripts": {
 		"init": "node scripts/init.js",
-		"dev": "node scripts/init.js && concurrently \"tsx scripts/esbuild.ts --watch\" \"tsx watch --env-file=.env back/server.ts\"",
+		"dev": "node scripts/init.js && tsx scripts/start.ts",
 		"build": "tsx scripts/esbuild.ts",
 		"start": "npm run build && node scripts/init.js && tsx --env-file=.env back/server.ts",
 		"postinstall": "patch-package"
