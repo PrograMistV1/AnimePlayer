@@ -10,10 +10,10 @@ export function initPlayer(): void {
     videoS.addEventListener("timeupdate", onTimeUpdate);
     videoS.addEventListener("loadeddata", onLoadedData);
 
-    window.addEventListener("beforeunload", () => validUploadData());
-    window.addEventListener("pagehide", (e) => validUploadData(e.persisted));
+    window.addEventListener("beforeunload", () => persistData({beacon: true}));
+    window.addEventListener("pagehide", (e) => persistData({beacon: true, condition: e.persisted}));
     document.addEventListener("visibilitychange", () =>
-        validUploadData(document.visibilityState === "hidden")
+        persistData({beacon: true, condition: document.visibilityState === "hidden"})
     );
 }
 
@@ -21,11 +21,9 @@ async function onTimeUpdate(): Promise<void> {
     const now = Date.now();
     if (now - lastTimeUpdateTimeCode < 10000) return;
 
-    const appData = getAnimeData();
-    const animeData = appData.continueWatching.find(
+    const animeData = getAnimeData().continueWatching.find(
         (item) => item.shikimoriId === seriaData.shikimoriId
     );
-
     if (!animeData) return;
 
     const currentTime = Math.floor(videoS.currentTime);
@@ -35,15 +33,16 @@ async function onTimeUpdate(): Promise<void> {
         animeData.startedWatching = false;
     }
 
-    animeData.timeCode.hour = Math.floor(currentTime / 3600);
-    animeData.timeCode.minute = Math.floor((currentTime % 3600) / 60);
-    animeData.timeCode.second = currentTime % 60;
+    animeData.timeCode = {
+        ...animeData.timeCode,
+        hour: Math.floor(currentTime / 3600),
+        minute: Math.floor((currentTime % 3600) / 60),
+        second: currentTime % 60,
+    };
     animeData.lastUpdate = Date.now();
-
     lastTimeUpdateTimeCode = now;
 
-    await saveAnimeData(getAnimeData());
-    syncLoadedData();
+    await persistData();
 }
 
 async function onLoadedData(): Promise<void> {
@@ -62,12 +61,7 @@ async function onLoadedData(): Promise<void> {
             seriaNum: seriaData.seriaNum ?? 0,
             startedWatching: true,
             viewed: false,
-            timeCode: {
-                fullTimeSeconds: Math.floor(videoS.duration),
-                hour: 0,
-                minute: 0,
-                second: 0,
-            },
+            timeCode: {fullTimeSeconds: Math.floor(videoS.duration), hour: 0, minute: 0, second: 0},
             lastUpdate: Date.now(),
         };
         appData.continueWatching.push(animeData);
@@ -82,25 +76,26 @@ async function onLoadedData(): Promise<void> {
     if (!animeData.posterUrl) {
         try {
             const {shikimoriInfo} = await getAnimeInfo(animeData.shikimoriId);
-            if (shikimoriInfo?.poster) {
-                animeData.posterUrl = shikimoriInfo.poster;
-            }
+            animeData.posterUrl = shikimoriInfo?.poster ?? null;
         } catch (e) {
             console.error(e);
         }
     }
 
-    await saveAnimeData(getAnimeData());
-    syncLoadedData();
+    await persistData();
 }
 
-function validUploadData(condition: boolean = true): void {
-    if (condition && isDataChanged()) {
-        const data = JSON.stringify(getAnimeData());
-        const sent = navigator.sendBeacon("/api/data", new Blob([data], {type: "application/json"}));
-        if (!sent) {
-            saveAnimeData(getAnimeData()).catch((e) => console.error(e));
+async function persistData({beacon = false, condition = true} = {}): Promise<void> {
+    if (!condition || (beacon && !isDataChanged())) return;
+
+    if (beacon) {
+        const blob = new Blob([JSON.stringify(getAnimeData())], {type: "application/json"});
+        if (!navigator.sendBeacon("/api/data", blob)) {
+            await saveAnimeData(getAnimeData()).catch(console.error);
         }
-        syncLoadedData();
+    } else {
+        await saveAnimeData(getAnimeData());
     }
+
+    syncLoadedData();
 }
