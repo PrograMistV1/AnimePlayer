@@ -1,7 +1,6 @@
-import { getAnimeInfo, saveAnimeData } from "../api/animeApi.ts";
-import type { ContinueWatchingItem } from "../types.ts";
-import { getAnimeData, isDataChanged, syncLoadedData } from "../state/playerState.ts";
-import { seriaData } from "../state/playerState.ts";
+import {getAnimeInfo, saveAnimeData} from "../api/animeApi.ts";
+import {type ContinueWatchingItem, createWatchingItem} from "../types.ts";
+import {getAnimeData, isDataChanged, seriaData, syncLoadedData} from "../state/playerState.ts";
 
 const videoS = document.querySelector<HTMLVideoElement>("#video")!;
 
@@ -11,22 +10,20 @@ export function initPlayer(): void {
     videoS.addEventListener("timeupdate", onTimeUpdate);
     videoS.addEventListener("loadeddata", onLoadedData);
 
-    window.addEventListener("beforeunload", () => validUploadData());
-    window.addEventListener("pagehide", (e) => validUploadData(e.persisted));
+    window.addEventListener("beforeunload", () => persistData({beacon: true}));
+    window.addEventListener("pagehide", (e) => persistData({beacon: true, condition: e.persisted}));
     document.addEventListener("visibilitychange", () =>
-        validUploadData(document.visibilityState === "hidden")
+        persistData({beacon: true, condition: document.visibilityState === "hidden"})
     );
 }
 
-function onTimeUpdate(): void {
+async function onTimeUpdate(): Promise<void> {
     const now = Date.now();
     if (now - lastTimeUpdateTimeCode < 10000) return;
 
-    const appData = getAnimeData();
-    const animeData = appData.continueWatching.find(
+    const animeData = getAnimeData().continueWatching.find(
         (item) => item.shikimoriId === seriaData.shikimoriId
     );
-
     if (!animeData) return;
 
     const currentTime = Math.floor(videoS.currentTime);
@@ -36,12 +33,16 @@ function onTimeUpdate(): void {
         animeData.startedWatching = false;
     }
 
-    animeData.timeCode.hour = Math.floor(currentTime / 3600);
-    animeData.timeCode.minute = Math.floor((currentTime % 3600) / 60);
-    animeData.timeCode.second = currentTime % 60;
+    animeData.timeCode = {
+        ...animeData.timeCode,
+        hour: Math.floor(currentTime / 3600),
+        minute: Math.floor((currentTime % 3600) / 60),
+        second: currentTime % 60,
+    };
     animeData.lastUpdate = Date.now();
-
     lastTimeUpdateTimeCode = now;
+
+    await persistData();
 }
 
 async function onLoadedData(): Promise<void> {
@@ -51,23 +52,7 @@ async function onLoadedData(): Promise<void> {
     );
 
     if (!animeData) {
-        animeData = {
-            title: seriaData.title ?? "",
-            shikimoriId: seriaData.shikimoriId ?? "",
-            posterUrl: null,
-            translationsId: seriaData.translationId ?? "",
-            translationsName: seriaData.translationName ?? "",
-            seriaNum: seriaData.seriaNum ?? 0,
-            startedWatching: true,
-            viewed: false,
-            timeCode: {
-                fullTimeSeconds: Math.floor(videoS.duration),
-                hour: 0,
-                minute: 0,
-                second: 0,
-            },
-            lastUpdate: Date.now(),
-        };
+        animeData = createWatchingItem(seriaData, Math.floor(videoS.duration));
         appData.continueWatching.push(animeData);
     } else {
         animeData.startedWatching = true;
@@ -79,22 +64,27 @@ async function onLoadedData(): Promise<void> {
 
     if (!animeData.posterUrl) {
         try {
-            const { shikimoriInfo } = await getAnimeInfo(animeData.shikimoriId);
-            if (shikimoriInfo?.poster) {
-                animeData.posterUrl = shikimoriInfo.poster;
-            }
+            const {shikimoriInfo} = await getAnimeInfo(animeData.shikimoriId);
+            animeData.posterUrl = shikimoriInfo?.poster ?? null;
         } catch (e) {
             console.error(e);
         }
     }
 
-    await saveAnimeData(getAnimeData());
-    syncLoadedData();
+    await persistData();
 }
 
-function validUploadData(condition: boolean = true): void {
-    if (condition && isDataChanged()) {
-        saveAnimeData(getAnimeData());
-        syncLoadedData();
+async function persistData({beacon = false, condition = true} = {}): Promise<void> {
+    if (!condition || (beacon && !isDataChanged())) return;
+
+    if (beacon) {
+        const blob = new Blob([JSON.stringify(getAnimeData())], {type: "application/json"});
+        if (!navigator.sendBeacon("/api/data", blob)) {
+            await saveAnimeData(getAnimeData()).catch(console.error);
+        }
+    } else {
+        await saveAnimeData(getAnimeData());
     }
+
+    syncLoadedData();
 }
