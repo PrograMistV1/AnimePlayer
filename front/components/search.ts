@@ -233,35 +233,48 @@ function clearAnimeCard(): void {
 }
 
 export async function restoreState(): Promise<void> {
-    const {shikimoriId, title, translationId, translationName, seriaNum} = seriaData;
-    if (!shikimoriId) return;
+    const {shikimoriId, title, translationId, translationName, seriaNum, currentTime} = seriaData;
+    if (!shikimoriId || translationId === undefined || seriaNum === undefined) return;
 
-    await chooseAnime({shikimori_id: shikimoriId, title: title ?? ""});
+    await resumeWatching({
+        shikimoriId,
+        title: title ?? "",
+        seriaNum,
+        translationsId: translationId,
+        translationName: translationName ?? "",
+    });
 
-    if (translationId && translationName) {
-        seriaData.translationId = translationId;
-        seriaData.translationName = translationName;
-        translationTitle.textContent = `Озвучка: ${translationName}`;
-
-        document.querySelectorAll<HTMLElement>(".translations-item").forEach(btn => {
-            if (btn.textContent === translationName) btn.classList.add("active");
-        });
+    if (currentTime) {
+        video.addEventListener("loadedmetadata", () => {
+            video.currentTime = currentTime;
+        }, {once: true});
     }
+}
 
-    if (seriaNum !== undefined) {
-        seriaData.seriaNum = seriaNum;
-        seriaTitle.textContent = `Серия: ${seriaNum}`;
+export async function resumeWatching(data: {
+    shikimoriId: string;
+    title: string;
+    seriaNum: number;
+    translationsId: string;
+    translationName: string;
+}): Promise<void> {
+    await chooseAnime({shikimori_id: data.shikimoriId, title: data.title});
 
-        document.querySelectorAll<HTMLElement>(".seria-button").forEach(btn => {
-            if (btn.textContent === String(seriaNum)) btn.classList.add("active");
-        });
+    seriaData.shikimoriId = data.shikimoriId;
+    seriaData.seriaNum = data.seriaNum;
+    seriaData.translationId = data.translationsId;
+    seriaData.title = data.title;
+    seriaData.translationName = data.translationName;
 
-        const savedTime = seriaData.currentTime;
-        if (savedTime) {
-            video.addEventListener("loadedmetadata", () => {
-                video.currentTime = savedTime;
-            }, {once: true});
-        }
-        setUrl().then();
-    }
+    translationTitle.textContent = `Озвучка: ${data.translationName}`;
+    seriaTitle.textContent = `Серия: ${data.seriaNum}`;
+
+    document.querySelectorAll<HTMLElement>(".translations-item").forEach(btn => {
+        btn.classList.toggle("active", btn.textContent === data.translationName);
+    });
+    document.querySelectorAll<HTMLElement>(".seria-button").forEach(btn => {
+        btn.classList.toggle("active", btn.textContent === String(data.seriaNum));
+    });
+
+    await setUrl();
 }

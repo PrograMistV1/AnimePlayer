@@ -10,7 +10,7 @@ export interface ContinueWatchingItem {
     shikimoriId: string;
     posterUrl: string | null;
     translationsId: string;
-    translationsName: string;
+    translationName: string;
     seriaNum: number;
     startedWatching: boolean;
     viewed: boolean;
@@ -24,7 +24,7 @@ export function createWatchingItem(seriaData: SeriaData, durationSeconds: number
         shikimoriId: seriaData.shikimoriId ?? "",
         posterUrl: null,
         translationsId: seriaData.translationId ?? "",
-        translationsName: seriaData.translationName ?? "",
+        translationName: seriaData.translationName ?? "",
         seriaNum: seriaData.seriaNum ?? 0,
         startedWatching: true,
         viewed: false,

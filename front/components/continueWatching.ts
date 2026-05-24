@@ -1,11 +1,9 @@
 import {getAnimeInfo, getCachedPoster, saveAnimeData} from "../api/animeApi.ts";
 import {advanceToNextSeria, type ContinueWatchingItem} from "../types.ts";
-import {getAnimeData, seriaData, syncLoadedData} from "../state/playerState.ts";
-import {chooseAnime, setUrl, transNameToEpCount} from "./search.ts";
+import {getAnimeData, syncLoadedData} from "../state/playerState.ts";
+import {resumeWatching, transNameToEpCount} from "./search.ts";
 
 const continueWatchingContainer = document.querySelector<HTMLElement>("#continue-watching-container")!;
-const translationTitle = document.querySelector<HTMLElement>("#translation-title")!;
-const seriaTitle = document.querySelector<HTMLElement>("#seria-title")!;
 const videoS = document.querySelector<HTMLVideoElement>("#video")!;
 
 export async function initContinueWatching(): Promise<void> {
@@ -66,15 +64,7 @@ async function createCWCard(data: ContinueWatchingItem, isBeginRender: boolean):
     }
 
     container.addEventListener("click", async () => {
-        await chooseAnime({shikimori_id: data.shikimoriId, title: data.title});
-        translationTitle.textContent = `Озвучка: ${data.translationsName}`;
-        seriaTitle.textContent = `Серия: ${data.seriaNum}`;
-        seriaData.shikimoriId = data.shikimoriId;
-        seriaData.seriaNum = data.seriaNum;
-        seriaData.translationId = data.translationsId;
-        seriaData.title = data.title;
-        seriaData.translationName = data.translationsName;
-        await setUrl();
+        await resumeWatching(data);
         videoS.currentTime = viewedTime;
         videoS.scrollIntoView({behavior: "smooth"});
     });
@@ -93,7 +83,7 @@ async function createCWCard(data: ContinueWatchingItem, isBeginRender: boolean):
         <div class="continue-watching-item-info-settings">
             <p>Серия: ${data.seriaNum}</p>
             <p class="continue-watching-item-info-translations">
-                Озвучка: ${data.translationsName}
+                Озвучка: ${data.translationName}
             </p>
         </div>
     </div>
