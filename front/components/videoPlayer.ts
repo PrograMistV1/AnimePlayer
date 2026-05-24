@@ -602,7 +602,7 @@ function toggleFullscreen(): void {
         else if ((videoplayerContainer as any).webkitRequestFullscreen) (videoplayerContainer as any).webkitRequestFullscreen();
         else if ((videoplayerContainer as any).msRequestFullscreen) (videoplayerContainer as any).msRequestFullscreen();
 
-        screen.orientation?.lock("landscape").catch((e) => console.error(e));
+        screen.orientation?.lock("landscape").catch((e) => console.warn(e));
     } else {
         if (document.exitFullscreen) document.exitFullscreen().catch(console.error);
         else if ((document as any).mozCancelFullScreen) (document as any).mozCancelFullScreen();
