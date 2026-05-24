@@ -18,6 +18,31 @@ export interface ContinueWatchingItem {
     lastUpdate: number;
 }
 
+export function createWatchingItem(seriaData: SeriaData, durationSeconds: number): ContinueWatchingItem {
+    return {
+        title: seriaData.title ?? "",
+        shikimoriId: seriaData.shikimoriId ?? "",
+        posterUrl: null,
+        translationsId: seriaData.translationId ?? "",
+        translationsName: seriaData.translationName ?? "",
+        seriaNum: seriaData.seriaNum ?? 0,
+        startedWatching: true,
+        viewed: false,
+        timeCode: {fullTimeSeconds: durationSeconds, hour: 0, minute: 0, second: 0},
+        lastUpdate: Date.now(),
+    };
+}
+
+export function advanceToNextSeria(item: ContinueWatchingItem): ContinueWatchingItem {
+    return {
+        ...item,
+        seriaNum: item.seriaNum + 1,
+        viewed: false,
+        startedWatching: false,
+        lastUpdate: Date.now(),
+    };
+}
+
 export interface AnimeData {
     searchMethod: string;
     continueWatching: ContinueWatchingItem[];

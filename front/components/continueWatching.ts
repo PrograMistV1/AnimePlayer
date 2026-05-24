@@ -1,9 +1,7 @@
-import { getAnimeInfo, saveAnimeData } from "../api/animeApi.ts";
-import type { ContinueWatchingItem } from "../types.ts";
-import { getAnimeData, setAnimeData, syncLoadedData } from "../state/playerState.ts";
-import { chooseAnime, chooseTranslation, setUrl } from "./search.ts";
-import { transNameToEpCount } from "./search.ts";
-import { seriaData } from "../state/playerState.ts";
+import {getAnimeInfo, saveAnimeData} from "../api/animeApi.ts";
+import {advanceToNextSeria, type ContinueWatchingItem} from "../types.ts";
+import {getAnimeData, seriaData, syncLoadedData} from "../state/playerState.ts";
+import {chooseAnime, setUrl, transNameToEpCount} from "./search.ts";
 
 const continueWatchingContainer = document.querySelector<HTMLElement>("#continue-watching-container")!;
 const translationTitle = document.querySelector<HTMLElement>("#translation-title")!;
@@ -27,7 +25,7 @@ export async function initContinueWatching(): Promise<void> {
         let isBeginRender = false;
 
         if (item.viewed) {
-            const { kodikInfo } = await getAnimeInfo(item.shikimoriId);
+            const {kodikInfo} = await getAnimeInfo(item.shikimoriId);
             const translations = kodikInfo?.translations ?? [];
 
             const translation = translations.find((t) => t.id === item.translationsId);
@@ -40,10 +38,7 @@ export async function initContinueWatching(): Promise<void> {
 
             isBeginRender = true;
             isNewData = true;
-            item.lastUpdate = Date.now();
-            item.seriaNum = item.seriaNum + 1;
-            item.viewed = false;
-            item.translationsName = translation.title;
+            Object.assign(item, advanceToNextSeria(item), {translationsName: translation.title});
         }
 
         isDataExistForRender = true;
@@ -71,7 +66,7 @@ async function createCWCard(data: ContinueWatchingItem, isBeginRender: boolean):
     }
 
     container.addEventListener("click", async () => {
-        await chooseAnime({ shikimori_id: data.shikimoriId, title: data.title });
+        await chooseAnime({shikimori_id: data.shikimoriId, title: data.title});
         translationTitle.textContent = `Озвучка: ${data.translationsName}`;
         seriaTitle.textContent = `Серия: ${data.seriaNum}`;
         seriaData.shikimoriId = data.shikimoriId;
@@ -81,7 +76,7 @@ async function createCWCard(data: ContinueWatchingItem, isBeginRender: boolean):
         seriaData.translationName = data.translationsName;
         await setUrl();
         videoS.currentTime = viewedTime;
-        videoS.scrollIntoView({ behavior: "smooth" });
+        videoS.scrollIntoView({behavior: "smooth"});
     });
 
     container.innerHTML = `
@@ -109,7 +104,7 @@ async function createCWCard(data: ContinueWatchingItem, isBeginRender: boolean):
 
     if (isBeginRender) {
         continueWatchingContainer.prepend(container);
-        continueWatchingContainer.scrollTo({ left: 0, behavior: "smooth" });
+        continueWatchingContainer.scrollTo({left: 0, behavior: "smooth"});
         return;
     }
     continueWatchingContainer.appendChild(container);
@@ -121,7 +116,7 @@ function loadPoster(container: HTMLElement, data: ContinueWatchingItem): void {
     const fetchPoster = async () => {
         posterElement.removeEventListener("error", onError);
         try {
-            const { shikimoriInfo } = await getAnimeInfo(data.shikimoriId);
+            const {shikimoriInfo} = await getAnimeInfo(data.shikimoriId);
             if (shikimoriInfo?.poster) {
                 posterElement.src = shikimoriInfo.poster;
                 data.posterUrl = shikimoriInfo.poster;

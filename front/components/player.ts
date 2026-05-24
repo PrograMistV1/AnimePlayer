@@ -1,5 +1,5 @@
 import {getAnimeInfo, saveAnimeData} from "../api/animeApi.ts";
-import type {ContinueWatchingItem} from "../types.ts";
+import {type ContinueWatchingItem, createWatchingItem} from "../types.ts";
 import {getAnimeData, isDataChanged, seriaData, syncLoadedData} from "../state/playerState.ts";
 
 const videoS = document.querySelector<HTMLVideoElement>("#video")!;
@@ -52,18 +52,7 @@ async function onLoadedData(): Promise<void> {
     );
 
     if (!animeData) {
-        animeData = {
-            title: seriaData.title ?? "",
-            shikimoriId: seriaData.shikimoriId ?? "",
-            posterUrl: null,
-            translationsId: seriaData.translationId ?? "",
-            translationsName: seriaData.translationName ?? "",
-            seriaNum: seriaData.seriaNum ?? 0,
-            startedWatching: true,
-            viewed: false,
-            timeCode: {fullTimeSeconds: Math.floor(videoS.duration), hour: 0, minute: 0, second: 0},
-            lastUpdate: Date.now(),
-        };
+        animeData = createWatchingItem(seriaData, Math.floor(videoS.duration));
         appData.continueWatching.push(animeData);
     } else {
         animeData.startedWatching = true;
