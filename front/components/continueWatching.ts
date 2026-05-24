@@ -1,7 +1,8 @@
 import {getAnimeInfo, getCachedPoster, saveAnimeData} from "../api/animeApi.ts";
 import {advanceToNextSeria, type ContinueWatchingItem} from "../types.ts";
 import {getAnimeData, syncLoadedData} from "../state/playerState.ts";
-import {resumeWatching, transNameToEpCount} from "./search.ts";
+import {transNameToEpCount} from "./search.ts";
+import {resumeWatching} from "./restore.ts";
 
 const continueWatchingContainer = document.querySelector<HTMLElement>("#continue-watching-container")!;
 const videoS = document.querySelector<HTMLVideoElement>("#video")!;
@@ -26,7 +27,7 @@ export async function initContinueWatching(): Promise<void> {
             const {kodikInfo} = await getAnimeInfo(item.shikimoriId);
             const translations = kodikInfo?.translations ?? [];
 
-            const translation = translations.find((t) => t.id === item.translationsId);
+            const translation = translations.find((t) => t.id === item.translationId);
             if (!translation) continue;
 
             const transSeries = transNameToEpCount(translation.title);

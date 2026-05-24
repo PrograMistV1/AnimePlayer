@@ -8,6 +8,13 @@ export const seriaData: SeriaData = createPersistentState<SeriaData>({
     translationName: undefined,
 }, "seriaData");
 
+type SeriaDataListener = (data: SeriaData) => void;
+const seriaDataListeners: SeriaDataListener[] = [];
+
+export function onSeriaDataChange(listener: SeriaDataListener): void {
+    seriaDataListeners.push(listener);
+}
+
 function createPersistentState<T extends object>(initial: T, key: string): T {
     const saved = localStorage.getItem(key);
     const data = saved ? {...initial, ...JSON.parse(saved)} : initial;
@@ -16,6 +23,7 @@ function createPersistentState<T extends object>(initial: T, key: string): T {
         set(target, prop, value) {
             (target as any)[prop] = value;
             localStorage.setItem(key, JSON.stringify(target));
+            seriaDataListeners.forEach(fn => fn(target as SeriaData));
             return true;
         }
     });

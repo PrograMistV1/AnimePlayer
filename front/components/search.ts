@@ -1,7 +1,7 @@
 import {getAnimeInfo, getAnimeLink, searchAnime} from "../api/animeApi.ts";
 import type {KodikInfo, ShikimoriInfo, Translation} from "../types.ts";
-import {getCurrentQuality, seriaData, setQualities, setVideoLink} from "../state/playerState.ts";
-import {loadVideo, video} from "./videoPlayer.ts";
+import {getCurrentQuality, onSeriaDataChange, seriaData, setQualities, setVideoLink} from "../state/playerState.ts";
+import {loadVideo} from "./videoPlayer.ts";
 
 const animeInfoTitle = document.querySelector<HTMLElement>("#anime-info-title")!;
 const animeInfoImg = document.querySelector<HTMLImageElement>("#anime-info-img")!;
@@ -16,6 +16,22 @@ const animeMetaRow = document.querySelector<HTMLElement>("#anime-meta-row")!;
 const animeGenres = document.querySelector<HTMLElement>("#anime-genres")!;
 const animeRating = document.querySelector<HTMLElement>("#anime-rating")!;
 const animeDescription = document.querySelector<HTMLElement>("#anime-description")!;
+
+onSeriaDataChange((data) => {
+    translationTitle.textContent = data.translationName
+        ? `Озвучка: ${data.translationName}`
+        : "Озвучка: не выбрана";
+    seriaTitle.textContent = data.seriaNum !== undefined
+        ? `Серия: ${data.seriaNum}`
+        : "Серия: не выбрана";
+
+    document.querySelectorAll<HTMLElement>(".translations-item").forEach(btn => {
+        btn.classList.toggle("active", btn.textContent === data.translationName);
+    });
+    document.querySelectorAll<HTMLElement>(".seria-button").forEach(btn => {
+        btn.classList.toggle("active", btn.textContent === String(data.seriaNum));
+    });
+});
 
 function transNameToEpCount(translation: string): number[] {
     const match = translation.match(/(\d+)[~-](\d+) эп\.\)|(\d+) эп\./);
@@ -230,51 +246,4 @@ function clearAnimeCard(): void {
     animeRating.innerHTML = "";
     animeDescription.textContent = "";
     animeInfoField.classList.remove("visible");
-}
-
-export async function restoreState(): Promise<void> {
-    const {shikimoriId, title, translationId, translationName, seriaNum, currentTime} = seriaData;
-    if (!shikimoriId || translationId === undefined || seriaNum === undefined) return;
-
-    await resumeWatching({
-        shikimoriId,
-        title: title ?? "",
-        seriaNum,
-        translationsId: translationId,
-        translationName: translationName ?? "",
-    });
-
-    if (currentTime) {
-        video.addEventListener("loadedmetadata", () => {
-            video.currentTime = currentTime;
-        }, {once: true});
-    }
-}
-
-export async function resumeWatching(data: {
-    shikimoriId: string;
-    title: string;
-    seriaNum: number;
-    translationsId: string;
-    translationName: string;
-}): Promise<void> {
-    await chooseAnime({shikimori_id: data.shikimoriId, title: data.title});
-
-    seriaData.shikimoriId = data.shikimoriId;
-    seriaData.seriaNum = data.seriaNum;
-    seriaData.translationId = data.translationsId;
-    seriaData.title = data.title;
-    seriaData.translationName = data.translationName;
-
-    translationTitle.textContent = `Озвучка: ${data.translationName}`;
-    seriaTitle.textContent = `Серия: ${data.seriaNum}`;
-
-    document.querySelectorAll<HTMLElement>(".translations-item").forEach(btn => {
-        btn.classList.toggle("active", btn.textContent === data.translationName);
-    });
-    document.querySelectorAll<HTMLElement>(".seria-button").forEach(btn => {
-        btn.classList.toggle("active", btn.textContent === String(data.seriaNum));
-    });
-
-    await setUrl();
 }

@@ -57,7 +57,7 @@ async function onLoadedData(): Promise<void> {
     } else {
         animeData.startedWatching = true;
         animeData.seriaNum = seriaData.seriaNum ?? animeData.seriaNum;
-        animeData.translationsId = seriaData.translationId ?? animeData.translationsId;
+        animeData.translationId = seriaData.translationId ?? animeData.translationId;
         animeData.translationName = seriaData.translationName ?? animeData.translationName;
         animeData.timeCode.fullTimeSeconds = Math.floor(videoS.duration);
     }
