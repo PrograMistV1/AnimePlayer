@@ -22,26 +22,29 @@ export async function initContinueWatching(): Promise<void> {
 
     for (const item of continueWatching) {
         let isBeginRender = false;
+        let isCompleted = false;
 
         if (item.viewed) {
             const {kodikInfo} = await getAnimeInfo(item.shikimoriId);
             const translations = kodikInfo?.translations ?? [];
-
             const translation = translations.find((t) => t.id === item.translationId);
+
             if (!translation) continue;
 
             const transSeries = transNameToEpCount(translation.title);
             const lastSeria = transSeries.length > 1 ? transSeries[1] : transSeries[0];
 
-            if (lastSeria === undefined || item.seriaNum >= lastSeria) continue;
-
-            isBeginRender = true;
-            isNewData = true;
-            Object.assign(item, advanceToNextSeria(item), {translationsName: translation.title});
+            if (lastSeria === undefined || item.seriaNum >= lastSeria) {
+                isCompleted = true;
+            } else {
+                isBeginRender = true;
+                isNewData = true;
+                Object.assign(item, advanceToNextSeria(item), {translationName: translation.title});
+            }
         }
 
         isDataExistForRender = true;
-        await createCWCard(item, isBeginRender);
+        await createCWCard(item, isBeginRender, isCompleted);
     }
 
     if (isNewData) {
@@ -53,7 +56,7 @@ export async function initContinueWatching(): Promise<void> {
     }
 }
 
-async function createCWCard(data: ContinueWatchingItem, isBeginRender: boolean): Promise<void> {
+async function createCWCard(data: ContinueWatchingItem, isBeginRender: boolean, isCompleted = false): Promise<void> {
     const container = document.createElement("div");
     container.className = "continue-watching-item";
 
@@ -74,18 +77,15 @@ async function createCWCard(data: ContinueWatchingItem, isBeginRender: boolean):
     <div class="continue-watching-img-container">
         <img src="" alt="poster" id="poster-${data.shikimoriId}" />
         <div class="img-overlay"></div>
+        ${isCompleted ? `<div class="completed-badge">Просмотрено</div>` : ""}
     </div>
     <div class="continue-watching-item-info">
         <div class="continue-watching-item-info-title-wrapper">
-            <div class="continue-watching-item-info-title">
-                ${data.title}
-            </div>
+            <div class="continue-watching-item-info-title">${data.title}</div>
         </div>
         <div class="continue-watching-item-info-settings">
             <p>Серия: ${data.seriaNum}</p>
-            <p class="continue-watching-item-info-translations">
-                Озвучка: ${data.translationName}
-            </p>
+            <p class="continue-watching-item-info-translations">Озвучка: ${data.translationName}</p>
         </div>
     </div>
     <div class="time-state" style="background: linear-gradient(to right, #ff6792 ${viewedPercent}%, transparent ${viewedPercent}%);"></div>
