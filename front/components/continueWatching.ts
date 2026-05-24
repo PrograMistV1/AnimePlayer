@@ -1,4 +1,4 @@
-import {getAnimeInfo, saveAnimeData} from "../api/animeApi.ts";
+import {getAnimeInfo, getCachedPoster, saveAnimeData} from "../api/animeApi.ts";
 import {advanceToNextSeria, type ContinueWatchingItem} from "../types.ts";
 import {getAnimeData, seriaData, syncLoadedData} from "../state/playerState.ts";
 import {chooseAnime, setUrl, transNameToEpCount} from "./search.ts";
@@ -129,9 +129,10 @@ function loadPoster(container: HTMLElement, data: ContinueWatchingItem): void {
     const onError = () => fetchPoster();
     posterElement.addEventListener("error", onError);
 
-    if (data.posterUrl) {
-        posterElement.src = data.posterUrl;
+    const poster = data.posterUrl ?? getCachedPoster(data.shikimoriId);
+    if (poster) {
+        posterElement.src = poster;
     } else {
-        fetchPoster();
+        fetchPoster().then();
     }
 }
