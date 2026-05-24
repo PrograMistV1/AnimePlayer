@@ -1,7 +1,6 @@
-import { getAnimeInfo, saveAnimeData } from "../api/animeApi.ts";
-import type { ContinueWatchingItem } from "../types.ts";
-import { getAnimeData, isDataChanged, syncLoadedData } from "../state/playerState.ts";
-import { seriaData } from "../state/playerState.ts";
+import {getAnimeInfo, saveAnimeData} from "../api/animeApi.ts";
+import type {ContinueWatchingItem} from "../types.ts";
+import {getAnimeData, isDataChanged, seriaData, syncLoadedData} from "../state/playerState.ts";
 
 const videoS = document.querySelector<HTMLVideoElement>("#video")!;
 
@@ -18,7 +17,7 @@ export function initPlayer(): void {
     );
 }
 
-function onTimeUpdate(): void {
+async function onTimeUpdate(): Promise<void> {
     const now = Date.now();
     if (now - lastTimeUpdateTimeCode < 10000) return;
 
@@ -42,6 +41,9 @@ function onTimeUpdate(): void {
     animeData.lastUpdate = Date.now();
 
     lastTimeUpdateTimeCode = now;
+
+    await saveAnimeData(getAnimeData());
+    syncLoadedData();
 }
 
 async function onLoadedData(): Promise<void> {
@@ -79,7 +81,7 @@ async function onLoadedData(): Promise<void> {
 
     if (!animeData.posterUrl) {
         try {
-            const { shikimoriInfo } = await getAnimeInfo(animeData.shikimoriId);
+            const {shikimoriInfo} = await getAnimeInfo(animeData.shikimoriId);
             if (shikimoriInfo?.poster) {
                 animeData.posterUrl = shikimoriInfo.poster;
             }
@@ -94,7 +96,11 @@ async function onLoadedData(): Promise<void> {
 
 function validUploadData(condition: boolean = true): void {
     if (condition && isDataChanged()) {
-        saveAnimeData(getAnimeData());
+        const data = JSON.stringify(getAnimeData());
+        const sent = navigator.sendBeacon("/api/data", new Blob([data], {type: "application/json"}));
+        if (!sent) {
+            saveAnimeData(getAnimeData()).catch((e) => console.error(e));
+        }
         syncLoadedData();
     }
 }
