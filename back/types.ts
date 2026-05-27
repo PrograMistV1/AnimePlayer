@@ -25,7 +25,7 @@ export interface AnimeData {
 
 export interface SearchResult {
     link: string | undefined;
-    shikimori_id: string | undefined;
+    shikimoriId: string | undefined;
     poster: string | null;
     original_title: string | undefined;
     title: string | undefined;
@@ -41,4 +41,14 @@ export interface AnimeInfo {
     genres: string[] | null;
     rating: number;
     description: string[] | null;
+}
+
+export interface InfoRequest {
+    shikimoriId: string;
+}
+
+export interface LinkRequest {
+    shikimoriId: string;
+    seriaNum: string;
+    translationId: string;
 }

@@ -1,5 +1,5 @@
 import {getAnimeInfo, getAnimeLink, searchAnime} from "../api/animeApi.ts";
-import type {KodikInfo, ShikimoriInfo, Translation} from "../types.ts";
+import type {KodikInfo, SearchResult, ShikimoriInfo, Translation} from "../types.ts";
 import {getCurrentQuality, onSeriaDataChange, seriaData, setQualities, setVideoLink} from "../state/playerState.ts";
 import {loadVideo} from "./videoPlayer.ts";
 
@@ -105,30 +105,30 @@ function renderTranslations(kodikInfo: KodikInfo): void {
     translationsList.appendChild(fragment);
 }
 
-export async function chooseAnime(results: { shikimori_id: string; title: string; type?: string; }): Promise<void> {
+export async function chooseAnime(anime: SearchResult): Promise<void> {
     chooseTranslation();
     clearAnimeCard();
     searchResultsList.textContent = "";
     searchInput.value = "";
 
-    seriaData.shikimoriId = results.shikimori_id;
-    seriaData.title = results.title;
-    animeInfoTitle.textContent = results.title;
+    seriaData.shikimoriId = anime.shikimoriId;
+    seriaData.title = anime.title;
+    animeInfoTitle.textContent = anime.title ?? "";
 
-    if (results.type === "Фильм") {
+    if (anime.type === "Фильм") {
         seriaData.seriaNum = 0;
         seriaTitle.textContent = "Серия: Фильм";
     }
 
     try {
-        const {kodikInfo, shikimoriInfo} = await getAnimeInfo(results.shikimori_id);
+        const {kodikInfo, shikimoriInfo} = await getAnimeInfo(anime.shikimoriId!);
         animeInfoImg.src = shikimoriInfo?.poster ?? "";
         animeInfoField.classList.add("visible");
 
         renderAnimeCard(shikimoriInfo);
 
         if (!kodikInfo) {
-            animeInfoTitle.textContent = `${results.title} АНИМЕ НЕ НАЙДЕНО В БАЗЕ KODIK`;
+            animeInfoTitle.textContent = `${anime.title} АНИМЕ НЕ НАЙДЕНО В БАЗЕ KODIK`;
             translationsList.textContent = "";
             renderSeriesList(null);
             return;
@@ -136,7 +136,7 @@ export async function chooseAnime(results: { shikimori_id: string; title: string
 
         renderTranslations(kodikInfo);
 
-        if (results.type === "Фильм") {
+        if (anime.type === "Фильм") {
             renderSeriesList(null);
             return;
         }
@@ -175,33 +175,35 @@ export async function setUrl(): Promise<void> {
 export function initSearch(): void {
     searchInput.addEventListener(
         "input",
-        debounce(async (e: Event) => {
-            const target = e.target as HTMLInputElement;
-            const data = await searchAnime(target.value);
+        debounce(async (e: Event): Promise<void> => {
+            const target = e.target;
+            if (!(target instanceof HTMLInputElement)) return;
 
-            if (data.error) {
+            const query = target.value.trim();
+            if (!query) {
                 searchResultsList.textContent = "";
                 return;
             }
 
-            const results = data.response as Array<{
-                title: string;
-                poster: string;
-                shikimori_id: string;
-                type?: string;
-            }>;
+            const data = await searchAnime(query);
 
-            searchResultsList.textContent = "";
+            if (data.error || !data.response?.length) {
+                searchResultsList.textContent = "";
+                return;
+            }
+
             const fragment = document.createDocumentFragment();
 
-            for (const result of results) {
+            for (const result of data.response) {
+                if (!result.shikimoriId || !result.title) continue;
+
                 const li = document.createElement("li");
                 const button = document.createElement("button");
                 const poster = document.createElement("img");
                 const title = document.createElement("div");
 
                 poster.className = "search-item-poster";
-                poster.src = result.poster;
+                poster.src = result.poster ?? "";
                 title.textContent = result.title;
                 button.className = "list-item-button";
 
@@ -211,6 +213,8 @@ export function initSearch(): void {
                 li.appendChild(button);
                 fragment.appendChild(li);
             }
+
+            searchResultsList.textContent = "";
             searchResultsList.appendChild(fragment);
         }, 300),
     );

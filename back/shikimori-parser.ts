@@ -134,7 +134,7 @@ export class ShikimoriParser {
 
         return {
             link: anime.attr("data-url"),
-            shikimori_id: anime.attr("data-id"),
+            shikimoriId: anime.attr("data-id"),
             poster: this.parsePoster(anime),
             ...this.parseTitles(info),
             type: this.parseType(info),

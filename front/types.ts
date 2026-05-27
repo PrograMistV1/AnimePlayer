@@ -85,7 +85,21 @@ export interface SeriaData {
     currentTime?: number;
 }
 
+export interface ApiResponse<T> {
+    response: T;
+    error?: string;
+}
+
 export interface AnimeLinkResponse {
     link: string;
     qualities: number[];
+}
+
+export interface SearchResult {
+    link?: string;
+    shikimoriId?: string;
+    poster?: string | null;
+    original_title?: string;
+    title?: string;
+    type?: string | null;
 }

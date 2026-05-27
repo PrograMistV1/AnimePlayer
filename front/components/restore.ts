@@ -6,7 +6,7 @@ import type {ContinueWatchingItem} from "../types.ts";
 export async function resumeWatching(data: Pick<ContinueWatchingItem,
     "shikimoriId" | "title" | "seriaNum" | "translationId" | "translationName"
 >): Promise<void> {
-    await chooseAnime({shikimori_id: data.shikimoriId, title: data.title});
+    await chooseAnime({shikimoriId: data.shikimoriId, title: data.title});
 
     seriaData.shikimoriId = data.shikimoriId;
     seriaData.seriaNum = data.seriaNum;

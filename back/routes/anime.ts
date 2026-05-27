@@ -2,6 +2,7 @@ import type {Request, Response} from "express";
 import {Router} from "express";
 import {createParser} from "@aerosstube/anime-parser-kodik-ts";
 import {ShikimoriParser} from "../shikimori-parser.js";
+import type {InfoRequest, LinkRequest} from "../types.ts";
 
 const router = Router();
 const parser = await createParser();
@@ -11,10 +12,11 @@ router.get("/search", search);
 router.get("/info", info);
 router.get("/link", link);
 
-async function search(req: Request, res: Response) {
+async function search(req: Request, res: Response): Promise<void> {
     const uncodeTitle = req.query.title as string | undefined;
     if (!uncodeTitle) {
-        return res.json({error: "SearchNotFound", errorMessage: "По запросу ничего не найдено",});
+        res.json({error: "SearchNotFound", errorMessage: "По запросу ничего не найдено"});
+        return;
     }
     const title = decodeURIComponent(uncodeTitle);
     try {
@@ -25,10 +27,12 @@ async function search(req: Request, res: Response) {
     }
 }
 
-async function info(req: Request, res: Response) {
-    const shikimoriId = req.query.shikimori_id as string | number | undefined;
+async function info(req: Request, res: Response): Promise<void> {
+    const data = req.query as unknown as InfoRequest;
+    const {shikimoriId} = data;
     if (!shikimoriId) {
-        return res.status(400).json({error: "MissingParams"});
+        res.status(400).json({error: "MissingParams"});
+        return;
     }
     try {
         const [kodikInfo, shikimoriInfo] = await Promise.allSettled([
@@ -48,12 +52,12 @@ async function info(req: Request, res: Response) {
     }
 }
 
-async function link(req: Request, res: Response) {
-    const shikimoriId = req.query.shikimori_id as string | number | undefined;
-    const seriaNum = req.query.seria_num as string | undefined;
-    const translationId = req.query.translation_id as string | number | undefined;
+async function link(req: Request, res: Response): Promise<void> {
+    const data = req.query as unknown as LinkRequest;
+    const {shikimoriId, seriaNum, translationId} = data;
     if (!shikimoriId || !seriaNum || !translationId) {
-        return res.status(400).json({error: "MissingParams"});
+        res.status(400).json({error: "MissingParams"});
+        return;
     }
 
     try {
@@ -69,7 +73,7 @@ async function link(req: Request, res: Response) {
         res.json({link, qualities});
     } catch (error) {
         const err = error as Error;
-        return res.json({error: "GetLinkError", errorMessage: err.message,});
+        res.json({error: "GetLinkError", errorMessage: err.message});
     }
 }
 
