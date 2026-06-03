@@ -7,7 +7,7 @@
 		"init": "node scripts/init.js",
 		"dev": "node scripts/init.js && tsx scripts/start.ts",
 		"build": "tsx scripts/esbuild.ts",
-		"start": "npm run build && node scripts/init.js && tsx --env-file=.env back/server.ts",
+		"start": "node scripts/init.js && tsx --env-file=.env back/server.ts",
 		"postinstall": "patch-package"
 	},
 	"type": "module",
