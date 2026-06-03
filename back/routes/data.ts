@@ -3,7 +3,8 @@ import {readFile, rename, writeFile} from "fs/promises";
 import {randomUUID} from "crypto";
 import path from "path";
 import type {AnimeData} from "../types.js";
-import {__dirname, DATA_PATH} from "../config.js";
+import {DATA_PATH} from "../config.js";
+import {copyFile, unlink} from "node:fs/promises";
 
 const router = Router();
 
@@ -29,16 +30,33 @@ async function postData(req: Request, res: Response) {
         return res.status(400).json({error: "EmptyBody"});
     }
 
-    const tmpPath = path.join(__dirname, `data.${randomUUID()}.tmp`);
+    const tmpPath = path.join(path.dirname(DATA_PATH), `data.${randomUUID()}.tmp`);
     try {
         await writeFile(tmpPath, JSON.stringify(body, null, 4));
-        await rename(tmpPath, DATA_PATH);
-
-        res.status(200).json({success: true, message: "Данные обновлены",});
+        await safeRename(tmpPath, DATA_PATH);
+        res.status(200).json({success: true, message: "Данные обновлены"});
     } catch (error) {
+        try {
+            await unlink(tmpPath);
+        } catch {
+        }
         console.error("UpdateDataError:", error);
         const err = error as Error;
-        res.status(500).json({error: "UpdateDataError", errorMessage: err.message,});
+        res.status(500).json({error: "UpdateDataError", errorMessage: err.message});
+    }
+}
+
+async function safeRename(src: string, dest: string): Promise<void> {
+    try {
+        await rename(src, dest);
+    } catch (e) {
+        const err = e as NodeJS.ErrnoException;
+        if (err.code === "EPERM" || err.code === "EACCES") {
+            await copyFile(src, dest);
+            await unlink(src);
+        } else {
+            throw err;
+        }
     }
 }
 
