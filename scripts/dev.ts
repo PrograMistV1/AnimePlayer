@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
 import chokidar from "chokidar";
-import { copyStatic, outDir, publicDir } from "./static.ts";
+import { copyStatic, outDir, distDir, publicDir } from "./static.ts";
 
 const DEV_PORT = 5173;
 
@@ -51,9 +51,6 @@ function startProxy(notify: () => void) {
             return res.end();
         }
 
-        // =====================
-        // SSE
-        // =====================
         if (req.url === "/__livereload") {
             res.writeHead(200, {
                 "Content-Type": "text/event-stream",
@@ -61,21 +58,14 @@ function startProxy(notify: () => void) {
                 "Connection": "keep-alive",
                 "Access-Control-Allow-Origin": "*",
             });
-
             res.write(": connected\n\n");
             clients.add(res);
-
             req.on("close", () => clients.delete(res));
             req.on("error", () => clients.delete(res));
             return;
         }
 
-        const isApi = req.url.startsWith("/api");
-
-        // =====================
-        // API proxy
-        // =====================
-        if (isApi) {
+        if (req.url.startsWith("/api")) {
             const proxy = http.request(
                 {
                     hostname: "127.0.0.1",
@@ -89,48 +79,58 @@ function startProxy(notify: () => void) {
                     proxyRes.pipe(res);
                 }
             );
-
             proxy.on("error", (err) => {
                 console.error("[proxy api]", err.message);
                 res.writeHead(502);
                 res.end("Bad Gateway");
             });
-
             req.pipe(proxy);
             return;
         }
 
-        // =====================
-        // STATIC files
-        // =====================
-        let filePath = path.join(outDir, req.url === "/" ? "index.html" : req.url);
+        const urlPath = req.url === "/" ? "/index.html" : req.url;
 
-        if (!filePath.startsWith(outDir)) {
-            res.writeHead(403);
-            return res.end("Forbidden");
+        const candidates = [
+            path.join(outDir, urlPath),
+            path.join(distDir, "public", urlPath),
+            path.join(distDir, urlPath),
+        ];
+
+        let filePath: string | null = null;
+        for (const candidate of candidates) {
+            const resolved = path.resolve(candidate);
+            if (!resolved.startsWith(path.resolve(distDir))) continue;
+
+            if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) {
+                filePath = resolved;
+                break;
+            }
         }
 
-        if (!fs.existsSync(filePath)) {
-            filePath = path.join(outDir, "index.html");
+        if (!filePath) {
+            const indexPath = path.join(distDir, "index.html");
+            if (fs.existsSync(indexPath)) {
+                filePath = indexPath;
+            } else {
+                res.writeHead(404);
+                return res.end("Not found");
+            }
         }
-
-        if (!fs.existsSync(filePath)) {
-            res.writeHead(404);
-            return res.end("Not found");
-        }
-
-        let content = fs.readFileSync(filePath);
 
         const ext = path.extname(filePath);
-
         const contentType =
-            ext === ".html"
-                ? "text/html"
-                : ext === ".css"
-                    ? "text/css"
-                    : ext === ".js"
-                        ? "application/javascript"
-                        : "application/octet-stream";
+            ext === ".html"  ? "text/html; charset=utf-8" :
+                ext === ".css"   ? "text/css" :
+                    ext === ".js"    ? "application/javascript" :
+                        ext === ".json"  ? "application/json" :
+                            ext === ".svg"   ? "image/svg+xml" :
+                                ext === ".png"   ? "image/png" :
+                                    ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" :
+                                        ext === ".woff"  ? "font/woff" :
+                                            ext === ".woff2" ? "font/woff2" :
+                                                "application/octet-stream";
+
+        let content = fs.readFileSync(filePath);
 
         if (ext === ".html") {
             content = Buffer.from(injectLivereload(content.toString()));
@@ -164,9 +164,6 @@ export async function runDev(buildOptions: esbuild.BuildOptions) {
 
     copyStatic();
 
-    // =====================
-    // STATIC WATCH (chokidar)
-    // =====================
     const watcher = chokidar.watch(publicDir, {
         ignoreInitial: true,
         persistent: true,
@@ -180,14 +177,11 @@ export async function runDev(buildOptions: esbuild.BuildOptions) {
         ) return;
 
         console.log("[static]", event, filePath);
-
         copyStatic();
         notifyClients();
     });
 
-    // index.html отдельно
     const indexPath = path.join(process.cwd(), "index.html");
-
     if (fs.existsSync(indexPath)) {
         chokidar.watch(indexPath).on("change", () => {
             console.log("[html] changed");

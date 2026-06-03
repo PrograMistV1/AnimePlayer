@@ -38,10 +38,10 @@ app.use((req, _res, next) => {
 app.use("/api/anime", animeRouter);
 app.use("/api/data", dataRouter);
 
-app.use(express.static(path.join(__dirname, "../dist/public")));
+app.use(express.static(path.join(__dirname, "../dist")));
 
 app.use((_req, res) => {
-    res.sendFile(path.join(__dirname, "../dist/public/index.html"));
+    res.sendFile(path.join(__dirname, "../dist/index.html"));
 });
 
 app.listen(PORT, "0.0.0.0", () => {

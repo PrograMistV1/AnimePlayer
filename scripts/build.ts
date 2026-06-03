@@ -1,6 +1,6 @@
 import * as esbuild from "esbuild";
 import * as fs from "fs";
-import { outDir } from "./static.ts";
+import {copyStatic, distDir, outDir} from "./static.ts";
 
 export const ENTRY = "front/main.ts";
 
@@ -15,25 +15,28 @@ export function getBuildOptions(isWatch: boolean): esbuild.BuildOptions {
         sourcemap: isWatch ? "inline" : false,
         minify: !isWatch,
         loader: {
-            ".png":   "file",
-            ".jpg":   "file",
-            ".jpeg":  "file",
-            ".gif":   "file",
-            ".svg":   "file",
-            ".woff":  "file",
+            ".png": "file",
+            ".jpg": "file",
+            ".jpeg": "file",
+            ".gif": "file",
+            ".svg": "file",
+            ".woff": "file",
             ".woff2": "file",
-            ".ttf":   "file",
-            ".eot":   "file",
-            ".ico":   "file",
-            ".css":   "css",
+            ".ttf": "file",
+            ".eot": "file",
+            ".ico": "file",
+            ".css": "css",
         },
         assetNames: "assets/[name]-[hash]",
         chunkNames: "assets/[name]-[hash]",
+        entryNames: "[name]",
     };
 }
 
 export async function runBuild(options: esbuild.BuildOptions) {
-    fs.rmSync(outDir, { recursive: true, force: true });
+    fs.rmSync(distDir, {recursive: true, force: true});
+
+    copyStatic();
 
     const result = await esbuild.build(options);
 
