@@ -39,6 +39,8 @@ app.use("/api/anime", animeRouter);
 app.use("/api/data", dataRouter);
 
 app.use(express.static(path.join(__dirname, "../dist")));
+app.use(express.static(path.join(__dirname, "../dist/public")));
+app.use(express.static(path.join(__dirname, "../dist/assets")));
 
 app.use((_req, res) => {
     res.sendFile(path.join(__dirname, "../dist/index.html"));
