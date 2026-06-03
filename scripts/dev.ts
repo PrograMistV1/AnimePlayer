@@ -3,15 +3,44 @@ import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
 import chokidar from "chokidar";
-import { copyStatic, outDir, distDir, publicDir } from "./static.ts";
+import {copyStatic, distDir, outDir, publicDir} from "./static.ts";
 
 const DEV_PORT = 5173;
 
 const LIVERELOAD_SCRIPT = `
 <script>
   (function() {
+    const saved = sessionStorage.getItem('__dev_scroll');
+    if (saved) {
+      sessionStorage.removeItem('__dev_scroll');
+      const { x, y } = JSON.parse(saved);
+      window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => window.scrollTo(x, y), 100);
+      });
+    }
+
     const es = new EventSource("/__livereload");
-    es.onmessage = () => location.reload();
+
+    es.onmessage = (e) => {
+      const data = JSON.parse(e.data || '{}');
+
+      if (data.type === 'css') {
+        document.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+          const el = link;
+          const url = new URL(el.href);
+          url.searchParams.set('_t', Date.now().toString());
+          el.href = url.toString();
+        });
+        return;
+      }
+
+      sessionStorage.setItem('__dev_scroll', JSON.stringify({
+        x: window.scrollX,
+        y: window.scrollY,
+      }));
+      location.reload();
+    };
+
     es.onerror = () => setTimeout(() => location.reload(), 1000);
   })();
 </script>
@@ -21,28 +50,27 @@ function injectLivereload(html: string) {
     return html.replace("</body>", `${LIVERELOAD_SCRIPT}</body>`);
 }
 
-function makeLivereloadPlugin(notify: () => void): esbuild.Plugin {
+function makeLivereloadPlugin(notify: (type?: "css" | "full") => void): esbuild.Plugin {
     return {
         name: "livereload",
         setup(build) {
             build.onEnd((result) => {
                 if (result.errors.length === 0) {
                     console.log("[esbuild] rebuilt");
-                    setTimeout(notify, 50);
+                    setTimeout(() => notify("full"), 50);
                 }
             });
         },
     };
 }
 
-function startProxy(notify: () => void) {
+function startProxy() {
     const clients = new Set<http.ServerResponse>();
 
-    function notifyClients() {
+    function notifyClients(type: "css" | "full" = "full") {
         for (const client of clients) {
-            client.write("data: reload\n\n");
+            client.write(`data: ${JSON.stringify({type})}\n\n`);
         }
-        notify();
     }
 
     const server = http.createServer((req, res) => {
@@ -88,7 +116,8 @@ function startProxy(notify: () => void) {
             return;
         }
 
-        const urlPath = req.url === "/" ? "/index.html" : req.url;
+        const rawPath = req.url.split("?")[0] ?? "/";
+        const urlPath = rawPath === "/" ? "/index.html" : rawPath;
 
         const candidates = [
             path.join(outDir, urlPath),
@@ -100,7 +129,6 @@ function startProxy(notify: () => void) {
         for (const candidate of candidates) {
             const resolved = path.resolve(candidate);
             if (!resolved.startsWith(path.resolve(distDir))) continue;
-
             if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) {
                 filePath = resolved;
                 break;
@@ -119,14 +147,14 @@ function startProxy(notify: () => void) {
 
         const ext = path.extname(filePath);
         const contentType =
-            ext === ".html"  ? "text/html; charset=utf-8" :
-                ext === ".css"   ? "text/css" :
-                    ext === ".js"    ? "application/javascript" :
-                        ext === ".json"  ? "application/json" :
-                            ext === ".svg"   ? "image/svg+xml" :
-                                ext === ".png"   ? "image/png" :
+            ext === ".html" ? "text/html; charset=utf-8" :
+                ext === ".css" ? "text/css" :
+                    ext === ".js" ? "application/javascript" :
+                        ext === ".json" ? "application/json" :
+                            ext === ".svg" ? "image/svg+xml" :
+                                ext === ".png" ? "image/png" :
                                     ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" :
-                                        ext === ".woff"  ? "font/woff" :
+                                        ext === ".woff" ? "font/woff" :
                                             ext === ".woff2" ? "font/woff2" :
                                                 "application/octet-stream";
 
@@ -136,7 +164,12 @@ function startProxy(notify: () => void) {
             content = Buffer.from(injectLivereload(content.toString()));
         }
 
-        res.writeHead(200, { "Content-Type": contentType });
+        const headers: Record<string, string> = {"Content-Type": contentType};
+        if (ext === ".css") {
+            headers["Cache-Control"] = "no-store";
+        }
+
+        res.writeHead(200, headers);
         res.end(content);
     });
 
@@ -144,13 +177,13 @@ function startProxy(notify: () => void) {
         console.log(`[dev] http://localhost:${DEV_PORT}`);
     });
 
-    return { notifyClients };
+    return {notifyClients};
 }
 
 export async function runDev(buildOptions: esbuild.BuildOptions) {
-    let notifyRef: (() => void) | null = null;
+    const {notifyClients} = startProxy();
 
-    const plugin = makeLivereloadPlugin(() => notifyRef?.());
+    const plugin = makeLivereloadPlugin((type = "full") => notifyClients(type));
 
     const ctx = await esbuild.context({
         ...buildOptions,
@@ -158,9 +191,6 @@ export async function runDev(buildOptions: esbuild.BuildOptions) {
     });
 
     await ctx.watch();
-
-    const { notifyClients } = startProxy(() => {});
-    notifyRef = notifyClients;
 
     copyStatic();
 
@@ -178,7 +208,7 @@ export async function runDev(buildOptions: esbuild.BuildOptions) {
 
         console.log("[static]", event, filePath);
         copyStatic();
-        notifyClients();
+        notifyClients(filePath.endsWith(".css") ? "css" : "full");
     });
 
     const indexPath = path.join(process.cwd(), "index.html");
@@ -186,7 +216,7 @@ export async function runDev(buildOptions: esbuild.BuildOptions) {
         chokidar.watch(indexPath).on("change", () => {
             console.log("[html] changed");
             copyStatic();
-            notifyClients();
+            notifyClients("full");
         });
     }
 }
