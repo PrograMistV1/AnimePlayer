@@ -17,6 +17,7 @@
 	"dependencies": {
 		"@aerosstube/anime-parser-kodik-ts": "^1.0.0",
 		"cheerio": "^1.1.2",
+		"execa": "^9.6.1",
 		"express": "^5.1.0"
 	},
 	"devDependencies": {
