@@ -1,35 +1,45 @@
-import type {AnimeData, AnimeInfoResponse, AnimeLinkResponse, ApiResponse, SearchResult,} from "../types.ts";
+import type {AnimeData, AnimeInfoResponse, AnimeLinkResponse, SearchResult} from "../types.ts";
 
 const animeInfoCache = new Map<string, Promise<AnimeInfoResponse>>();
 
-async function fetchJson<T>(url: string): Promise<T> {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-        throw new Error(`HTTP error: ${response.status}`);
+export class ApiError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "ApiError";
     }
-
-    return response.json().then() as Promise<T>;
 }
 
-export async function searchAnime(title: string): Promise<ApiResponse<SearchResult[]>> {
-    return fetchJson<ApiResponse<SearchResult[]>>(`/api/anime/search?title=${encodeURIComponent(title)}`);
+async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+    const response = await fetch(url, options);
+    const json = await response.json();
+
+    if (!response.ok) {
+        throw new ApiError(json.message ?? "Unknown error");
+    }
+
+    return json.data as T;
+}
+
+export async function searchAnime(title: string): Promise<SearchResult[]> {
+    return fetchJson<SearchResult[]>(`/api/anime/search?title=${encodeURIComponent(title)}`);
 }
 
 export function getAnimeInfo(shikimoriId: string): Promise<AnimeInfoResponse> {
     if (!animeInfoCache.has(shikimoriId)) {
-        const promise = fetchJson<ApiResponse<AnimeInfoResponse>>(
+        const promise = fetchJson<AnimeInfoResponse>(
             `/api/anime/info?shikimoriId=${shikimoriId}`
         ).then(data => {
-            const response = data.response;
-            if (response.shikimoriInfo?.poster) {
+            if (data.shikimoriInfo?.poster) {
                 try {
-                    sessionStorage.setItem(`poster:${shikimoriId}`, response.shikimoriInfo.poster);
+                    sessionStorage.setItem(`poster:${shikimoriId}`, data.shikimoriInfo.poster);
                 } catch {
-                    console.warn(`Failed to cache poster: ${response.shikimoriInfo.poster}`);
+                    console.warn(`Failed to cache poster: ${data.shikimoriInfo.poster}`);
                 }
             }
-            return response;
+            return data;
+        }).catch(err => {
+            animeInfoCache.delete(shikimoriId);
+            throw err;
         });
         animeInfoCache.set(shikimoriId, promise);
     }
@@ -51,15 +61,9 @@ export async function loadAnimeData(): Promise<AnimeData> {
 }
 
 export async function saveAnimeData(data: AnimeData): Promise<void> {
-    const response = await fetch("/api/data", {
+    await fetchJson<void>("/api/data", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
+        headers: {"Content-Type": "application/json"},
         body: JSON.stringify(data),
     });
-
-    if (!response.ok) {
-        throw new Error(`HTTP error: ${response.status}`);
-    }
 }
