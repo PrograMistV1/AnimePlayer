@@ -16,18 +16,18 @@ async function getData(_req: Request, res: Response) {
     try {
         const readData = await readFile(DATA_PATH, "utf8");
         const data: AnimeData = JSON.parse(readData);
-        return res.json(data);
+        return res.json({data});
     } catch (error) {
-        console.error("GetDataError:", error);
+        console.error("GET_DATA_ERROR: ", error);
         const err = error as Error;
-        return res.json({error: "GetDataError", errorMessage: err.message,});
+        return res.status(500).json({code: "GET_DATA_ERROR", message: err.message});
     }
 }
 
 async function postData(req: Request, res: Response) {
     const body = req.body as AnimeData;
     if (!body || Object.keys(body).length === 0) {
-        return res.status(400).json({error: "EmptyBody"});
+        return res.status(400).json({code: "EMPTY_BODY", message: "Request body is empty"});
     }
 
     const tmpPath = path.join(path.dirname(DATA_PATH), `data.${randomUUID()}.tmp`);
@@ -40,9 +40,9 @@ async function postData(req: Request, res: Response) {
             await unlink(tmpPath);
         } catch {
         }
-        console.error("UpdateDataError:", error);
+        console.error("UPDATE_DATA_ERROR: ", error);
         const err = error as Error;
-        res.status(500).json({error: "UpdateDataError", errorMessage: err.message});
+        res.status(500).json({code: "UPDATE_DATA_ERROR", message: err.message});
     }
 }
 

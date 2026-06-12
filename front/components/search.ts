@@ -185,37 +185,40 @@ export function initSearch(): void {
                 return;
             }
 
-            const data = await searchAnime(query);
+            try {
+                const results = await searchAnime(query);
+                if (!results.length) {
+                    searchResultsList.textContent = "";
+                    return;
+                }
 
-            if (data.error || !data.response?.length) {
+                const fragment = document.createDocumentFragment();
+
+                for (const result of results) {
+                    if (!result.shikimoriId || !result.title) continue;
+
+                    const li = document.createElement("li");
+                    const button = document.createElement("button");
+                    const poster = document.createElement("img");
+                    const title = document.createElement("div");
+
+                    poster.className = "search-item-poster";
+                    poster.src = result.poster ?? "";
+                    title.textContent = result.title;
+                    button.className = "list-item-button";
+
+                    button.addEventListener("click", () => chooseAnime(result));
+                    button.appendChild(poster);
+                    button.appendChild(title);
+                    li.appendChild(button);
+                    fragment.appendChild(li);
+                }
+
                 searchResultsList.textContent = "";
-                return;
+                searchResultsList.appendChild(fragment);
+            } catch {
+                searchResultsList.textContent = "";
             }
-
-            const fragment = document.createDocumentFragment();
-
-            for (const result of data.response) {
-                if (!result.shikimoriId || !result.title) continue;
-
-                const li = document.createElement("li");
-                const button = document.createElement("button");
-                const poster = document.createElement("img");
-                const title = document.createElement("div");
-
-                poster.className = "search-item-poster";
-                poster.src = result.poster ?? "";
-                title.textContent = result.title;
-                button.className = "list-item-button";
-
-                button.addEventListener("click", () => chooseAnime(result));
-                button.appendChild(poster);
-                button.appendChild(title);
-                li.appendChild(button);
-                fragment.appendChild(li);
-            }
-
-            searchResultsList.textContent = "";
-            searchResultsList.appendChild(fragment);
         }, 300),
     );
 }
