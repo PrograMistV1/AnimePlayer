@@ -52,3 +52,12 @@ export interface LinkRequest {
     seriaNum: string;
     translationId: string;
 }
+
+export interface ApiSuccess<T> {
+    data: T;
+}
+
+export interface ApiError {
+    code: string;
+    message: string;
+}
